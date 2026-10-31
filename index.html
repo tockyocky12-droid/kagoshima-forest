@@ -353,7 +353,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31w</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31x</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1128,10 +1128,13 @@ function muniSetup(){
   const ms=[...new Set(districts.map(d=>d.m))].sort(); // 建制順（市町村コードの順）
   ms.forEach(mc=>{const o=document.createElement('option');o.value=mc;o.textContent=(MUNI[mc]||{}).name||mc;muniSel.append(o)});
   muniSel.hidden=false;const q=document.getElementById('q');q.placeholder='地番で探す';
-  let chosenAt=0; // 選んだ直後の移動では、選んだ市町村を変えない
-  const pickNow=()=>{if(Date.now()-chosenAt<2500)return;const m=muniAt(map.getCenter());if(m)muniSel.value=m};
-  pickNow();map.on('moveend',pickNow);
-  muniSel.onchange=()=>{chosenAt=Date.now();map.fitBounds(muniBounds(muniSel.value));toast(`${muniSel.selectedOptions[0].textContent}へ移動しました（地番の検索はこの市町村の中で行います）`)};
+  // 選んだ市町村は、地図を拡大して（地番が見える大きさで）別の市町村へ動かしたときだけ切り替える。
+  // 選んだときの移動や、市町村全体を見ている広さでは、選んだ市町村のまま
+  let chosen=false;
+  const pickNow=()=>{if(chosen){chosen=false;return}if(map.getZoom()<13)return;const m=muniAt(map.getCenter());if(m)muniSel.value=m};
+  {const m=muniAt(map.getCenter());if(m)muniSel.value=m}
+  map.on('moveend',pickNow);
+  muniSel.onchange=()=>{chosen=true;setTimeout(()=>{chosen=false},4000);map.fitBounds(muniBounds(muniSel.value));toast(`${muniSel.selectedOptions[0].textContent}へ移動しました（地番の検索はこの市町村の中で行います）`)};
 }
 document.getElementById('search').addEventListener('submit',async e=>{
   e.preventDefault();const q=document.getElementById('q').value.trim().replace(/番(地)?$/,'');
