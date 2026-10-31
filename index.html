@@ -353,7 +353,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31t</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31u</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -697,8 +697,8 @@ function buildForest(texts){
         m:g(r,'施業方法CD').replace(/　/g,' '),chi:g(r,'地位CD'),sp,hy:g(r,'施業履歴年度'),hw:g(r,'施業履歴作業CD'),
         fn:['木材等生産CD','水源かん養CD','山地災害防止CD','生活環境保全CD','保健文化CD'].map(k=>g(r,k))};
       Object.keys(rec).forEach(k=>{const v=rec[k];if(v===''||v==null||(Array.isArray(v)&&(!v.length||v.every(x=>x===''))))delete rec[k]});
-      // 「1342 1343」のように1行に複数の地番が書かれていたら、それぞれの地番に結び付ける
-      for(const c of cb.split(/\s+/).filter(Boolean))((out[o]||(out[o]={}))[c]||(out[o][c]=[])).push(rec);n++;
+      // 「1342 1343」「3044.3045」のように1行に複数の地番が書かれていたら、それぞれの地番に結び付ける
+      for(const c of cb.split(/[\s.]+/).filter(Boolean))((out[o]||(out[o]={}))[c]||(out[o][c]=[])).push(rec);n++;
     }
   }
   return {data:out,rows:n,skip,other:[...other]};
@@ -708,12 +708,12 @@ const idb={open(){return new Promise((ok,ng)=>{try{const r=indexedDB.open(CFG.id
   async set(k,v){const d=await this.open();return new Promise((ok,ng)=>{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>ok();tx.onerror=()=>ng(tx.error)})}};
 const TOWN=CFG.town;
 // 森林簿の大字 → 合併前の町（まとめた版は「錦江町（田代町）」の形）
-const townOf=k=>{if(!MULTI)return TOWN[k]||k;const i=k.indexOf('|'),m=MUNI[k.slice(0,i)]||{},oz=k.slice(i+1),t=(m.town||{})[oz];return t?`${m.name}（${t}）`:(m.name||oz)};
+const townOf=k=>{if(!MULTI)return TOWN[k]||k;const i=k.indexOf('|'),m=MUNI[k.slice(0,i)]||{},oz=k.slice(i+1),t=(m.town||{})[oz];return t?`${m.name}（${t}）`:((m.townList||[]).length?'':(m.name||oz))}; // 合併前の町の分かる市町村で、地番図に無い大字は数えない
 // 小班の件数（複数の地番に結び付けた小班は1件と数える）
 const countRows=d=>{const s=new Set();Object.values(d).forEach(o=>Object.values(o).forEach(a=>a.forEach(r=>s.add(r))));return s.size};
 function setForest(obj){
   forest=obj&&obj.data||{};const rows=countRows(forest);forestLoaded=rows>0;
-  const towns=[...new Set(Object.keys(forest).map(townOf))];
+  const towns=[...new Set(Object.keys(forest).map(townOf))].filter(Boolean);
   const missing=MULTI?[...new Set(Object.keys(forest).map(k=>k.split('|')[0]))].flatMap(mc=>(MUNI[mc].townList||[]).map(t=>`${MUNI[mc].name}（${t}）`)).filter(t=>!towns.includes(t))
     :CFG.townList.filter(t=>!towns.includes(t));
   const b=document.getElementById('fload');
@@ -739,7 +739,7 @@ async function onForestFiles(e){
     if(!add.rows)throw new Error(add.other&&add.other.length?`${add.other.join('・')}は、この地図にまだ入っていない市町村です`:'読み込める行がありませんでした');
     // 読み込み済みの森林簿に追加する（同じ大字は新しいCSVで置き換える）
     const data=Object.assign({},forest,add.data);
-    const towns=[...new Set(Object.keys(add.data).map(townOf))].join('・')+(add.other&&add.other.length?`（${add.other.join('・')}は地図に入っていないので除きました）`:'');
+    const towns=[...new Set(Object.keys(add.data).map(townOf))].filter(Boolean).join('・')+(add.other&&add.other.length?`（${add.other.join('・')}は地図に入っていないので除きました）`:'');
     const obj={data,rows:countRows(data),at:new Date().toISOString()};
     setForest(obj);
     try{await idb.set('forest',obj);toast(`${towns}の森林簿 ${add.rows.toLocaleString()} 件を読み込みました（この端末に保存）`)}
