@@ -6,7 +6,7 @@
 URL：https://tockyocky12-droid.github.io/kagoshima-forest/
 
 ## 入っている市町村
-錦江町・南大隅町・肝付町（大隅地域から順に足していきます）
+錦江町・南大隅町・肝付町・鹿屋市・垂水市・曽於市（大隅地域から順に足していきます）
 
 ## できること
 - 地番の境界（民有林）と国有林の小班を地図と航空写真に重ねて表示。市町村をまたいで続けて見られます
@@ -26,4 +26,6 @@ URL：https://tockyocky12-droid.github.io/kagoshima-forest/
 - アプリ本体（index.html・sw.js）は、my-first-repo の app/ と同じものです。my-first-repo で `python3 tools/sync_towns.py` を実行すると、こちらにも写ります
 - 市町村ごとの違いは config.js（munis）と munis.json だけです
 - 市町村の足し方：munis.json と config.js に1件足し、`python3 tools/build_region.py add 市町村コード 地番.geojson`
+- 大きな市町村（鹿屋市・垂水市・曽於市など）は、地番データを約2km四方ごとのファイルに分け、画面に映った所だけ読みます。地番の検索は市町村ごとの一覧（search.json）で探し、当てはまる所だけ読みます
+- 森林簿の大字名に合併前の町名が付かない場合（「上名」と「吾平町上名」など）は、旧町名を付けて地番データの大字名と照らし合わせます
 - 容量の目安は1リポジトリ1GB。足りなくなったら、地番データを別のリポジトリに分けます

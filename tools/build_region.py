@@ -1,7 +1,7 @@
 # かごしま森林管理システム（試作）のデータを作る。
 #   python3 tools/build_region.py                        … 目録と国有林を作り直す
-#   python3 tools/build_region.py add 46203 鹿屋.geojson … 市町村の地番GeoJSON（G空間情報センター、CRS84）を data/46203/ に取り込む
-# 市町村を足すときは、先に munis.json と config.js（munis）へ1件足す。
+#   python3 tools/build_region.py add 46203 鹿屋.geojson [46214 垂水.geojson …] … 市町村の地番GeoJSON（G空間情報センター、CRS84）を data/46203/ に取り込む
+# 市町村を足すときは、先に munis.json へ1件足す（config.js の munis は munis.json から自動で作る）。
 import json, os, sys, hashlib, re, zipfile, statistics
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KG = ROOT
@@ -44,38 +44,60 @@ def rnd(c):
     if isinstance(c[0], (int, float)): return [round(c[0], 6), round(c[1], 6)]
     return [rnd(x) for x in c]
 
+CELL = 0.02  # 大きな市町村は、約2km四方ごとのファイルに分けて、画面に映った所だけ読む
+
 def add_muni(code, src):
     g = json.load(open(src, encoding='utf-8'))
     fs = [f for f in g['features'] if f.get('geometry') and f['geometry']['type'] in ('Polygon', 'MultiPolygon')]
     fs, bad = drop_broken(fs)
     if bad: print('座標の壊れた筆を除外:', len(bad))
-    by = {}
+    cells = {}
     for f in fs:
         p = f['properties']
         q = {k: p[k] for k in KEEP if p.get(k) not in (None, '')}
-        f2 = {'type': 'Feature', 'properties': q, 'geometry': {'type': f['geometry']['type'], 'coordinates': rnd(f['geometry']['coordinates'])}}
-        by.setdefault((p.get('大字コード') or '000', p.get('大字名') or '（大字なし）'), []).append(f2)
+        cs = coords(f['geometry']); cx = sum(c[0] for c in cs) / len(cs); cy = sum(c[1] for c in cs) / len(cs)
+        key = (int(cx // CELL), int(cy // CELL))
+        cells.setdefault(key, []).append({'type': 'Feature', 'properties': q, 'geometry': {'type': f['geometry']['type'], 'coordinates': rnd(f['geometry']['coordinates'])}})
     out = os.path.join(KG, 'data', code); os.makedirs(out, exist_ok=True)
     for fn in os.listdir(out): os.remove(os.path.join(out, fn))
-    for (oc, on), lst in sorted(by.items()):
-        dump({'type': 'FeatureCollection', 'features': lst}, os.path.join(out, f'{oc}.geojson'))
-        print(code, on, len(lst))
+    names, rows = [], []
+    for (ix, iy), lst in sorted(cells.items()):
+        fn = f'g{ix}_{iy}.geojson'; i = len(names); names.append(fn)
+        dump({'type': 'FeatureCollection', 'features': lst}, os.path.join(out, fn))
+        rows += [(f['properties'].get('大字名', ''), f['properties'].get('地番', ''), i) for f in lst]
+    # 地番の検索用の一覧。1行が「大字の番号,地番,ファイルの番号」。検索で市全体を読まずに済む
+    oz = sorted({r[0] for r in rows}); oi = {o: k for k, o in enumerate(oz)}
+    dump({'files': names, 'oaza': oz, 'rows': '\n'.join(f'{oi[o]},{c},{i}' for o, c, i in rows)}, os.path.join(out, 'search.json'))
+    print(code, MUNIS[code]['name'], len(fs), '筆', len(names), 'ファイル')
     MUNIS[code]['data'] = f'data/{code}'
-    json.dump(MUNIS, open(os.path.join(KG, 'munis.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
 def build_index():
-    out = []
+    out, search = [], {}
     for code, m in MUNIS.items():
         folder = m.get('data')
         if not folder or not os.path.isdir(os.path.join(ROOT, folder)): continue
+        oz = set()
         for fn in sorted(f for f in os.listdir(os.path.join(ROOT, folder)) if f.endswith('.geojson')):
             p = os.path.join(ROOT, folder, fn); s = open(p, encoding='utf-8').read(); g = json.loads(s)
             if not g['features']: continue
-            out.append({'m': code, 'oaza': g['features'][0]['properties'].get('大字名', ''), 'file': f'{code}/{fn}',
+            names = [f['properties'].get('大字名', '') for f in g['features']]; oz.update(n for n in names if n)
+            top = max(set(names), key=names.count)
+            out.append({'m': code, 'oaza': top + (' ほか' if len(set(names)) > 1 else ''), 'file': f'{code}/{fn}',
                         'count': len(g['features']), 'bbox': bbox_of(g['features']), 'bytes': len(s.encode('utf-8')), 'v': ver(s)})
-    json.dump(out, open(os.path.join(KG, 'data', 'index.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        sp = os.path.join(ROOT, folder, 'search.json')
+        if os.path.exists(sp): search[code] = {'file': f'{code}/search.json', 'v': ver(open(sp, encoding='utf-8').read())}
+        m['oaza'] = sorted(oz)
+    idx = {'districts': out, 'search': search}
+    json.dump(idx, open(os.path.join(KG, 'data', 'index.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     mb = sum(d['bytes'] for d in out) / 1e6
-    print('目録:', len(out), '大字', sum(d['count'] for d in out), '筆', f'{mb:.0f}MB（このリポジトリは1GBまでが目安）')
+    print('目録:', len(out), 'ファイル', sum(d['count'] for d in out), '筆', f'{mb:.0f}MB（このリポジトリは1GBまでが目安）')
+    json.dump(MUNIS, open(os.path.join(KG, 'munis.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    # config.js の munis を munis.json から作り直す（地番データの置き場所は書かない）
+    cp = os.path.join(KG, 'config.js'); c = open(cp, encoding='utf-8').read()
+    cfg = {k: {kk: vv for kk, vv in v.items() if kk != 'data'} for k, v in MUNIS.items() if v.get('data')}
+    i = c.index('  munis:'); j = c.rindex('\n};')
+    c = c[:i] + '  munis:' + json.dumps(cfg, ensure_ascii=False, separators=(',', ':')) + c[j:]
+    open(cp, 'w', encoding='utf-8').write(c)
 
 def build_kokuyu():
     names = {m['name'] for m in MUNIS.values()}
@@ -111,5 +133,6 @@ def build_kokuyu():
 
 if __name__ == '__main__':
     a = sys.argv[1:]
-    if a and a[0] == 'add': add_muni(a[1], a[2])
+    if a and a[0] == 'add':
+        for code, src in zip(a[1::2], a[2::2]): add_muni(code, src)
     build_index(); build_kokuyu()
