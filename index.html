@@ -355,7 +355,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01a</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01b</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -820,15 +820,22 @@ function recColor(r){
 }
 function legendAreas(){
   const m=new Map(),add=(c,a)=>{if(c)m.set(c,(m.get(c)||0)+(a||0))};
+  // まとめた版は、選んでいる市町村の分だけを数える
+  const mc=MULTI?muniSel.value:null,mname=mc?(MUNI[mc]||{}).name:null;
+  const kkNameMuni={};if(mc&&kkLayer)kkLayer.eachLayer(l=>{kkNameMuni[l.feature.properties.n]=l.feature.properties.mn});
+  const inMuni=k=>!mc||k.startsWith(mc+'|')||(k.startsWith('kk|')&&kkNameMuni[k.slice(3)]===mname);
   if(tint==='rireki'){ // 施業は地番の数
-    for(let i=0;i<LS.length;i++){const k=LS.key(i);if(!k||!k.startsWith('rireki:'))continue;
+    for(let i=0;i<LS.length;i++){const k=LS.key(i);if(!k||!k.startsWith('rireki:')||!inMuni(k.slice(7)))continue;
       let l=[];try{l=JSON.parse(LS.getItem(k)||'[]')}catch(e){}if(!l.length)continue;
       const w=rkSort(l)[0].work||'';add(WORKS.find(x=>x[2](w))[1],1)}
     return {m,unit:'地番'};
   }
   const seen=new Set();
-  Object.values(forest).forEach(o=>Object.values(o).forEach(arr=>arr.forEach(r=>{if(seen.has(r))return;seen.add(r);add(recColor(r),r.a)})));
-  if(kkOn&&kkLayer)kkLayer.eachLayer(l=>{const p=l.feature.properties;add(tint==='own'?OWN_KK:kkTint(p),p.ha)});
+  Object.entries(forest).forEach(([k,o])=>{if(mc&&!k.startsWith(mc+'|'))return;Object.values(o).forEach(arr=>arr.forEach(r=>{if(seen.has(r))return;seen.add(r);add(recColor(r),r.a)}))});
+  // 国有林：区画ごとに読む版は、市町村ごとの集計（樹種・林齢・面積）を使う（見ていない所も含めて数える）
+  if(kkOn&&MULTI&&!kkSum&&!kkSumLoading)kkSumLoading=fetch('kokuyu/index.json').then(r=>r.json()).then(m=>{if(m.sum){kkSum=m.sum;if(tint!=='none')drawLegend()}}).catch(()=>{kkSumLoading=null});
+  if(kkOn&&kkSum&&mname)(kkSum[mname]||[]).forEach(([sp,age,ha])=>add(tint==='own'?OWN_KK:kkTint({sp:[[sp,age]]}),ha));
+  else if(kkOn&&kkLayer)kkLayer.eachLayer(l=>{const p=l.feature.properties;add(tint==='own'?OWN_KK:kkTint(p),p.ha)});
   return {m,unit:'ha'};
 }
 function drawLegend(){
@@ -850,8 +857,9 @@ function drawLegend(){
     v.textContent=unit==='ha'?(a?`${a>=10?Math.round(a).toLocaleString():a.toFixed(1)}`:'—'):String(a);
     if(tot&&a){const pc=document.createElement('small');pc.textContent=` ${(a/tot*100).toFixed(0)}%`;v.append(pc)}
     row.append(b,v,o);lg.append(row)});
+  if(!tot&&MULTI&&unit==='ha'){const t=document.createElement('div');t.className='lgtot';t.textContent=`${(MUNI[muniSel.value]||{}).name||'この市町村'}の森林簿がまだ読み込まれていないので、面積は出ません`;lg.append(t)}
   if(tot){const t=document.createElement('div');t.className='lgtot';t.append(`合計 ${unit==='ha'?Math.round(tot).toLocaleString()+' ha':tot+' 地番'}`);
-    if(unit==='ha')t.append(document.createElement('br'),kkOn?(kkParts?'（民有林の森林簿＋国有林。国有林は地図で見た範囲の分）':'（民有林の森林簿＋国有林）'):'（民有林の森林簿。国有林は「国有林」ボタンで加わります）');lg.append(t)}
+    if(unit==='ha')t.append(document.createElement('br'),'（'+(MULTI?`${(MUNI[muniSel.value]||{}).name||''}の`:'')+(kkOn?(kkParts&&!kkSum?'民有林の森林簿＋国有林。国有林は地図で見た範囲の分':'民有林の森林簿＋国有林'):'民有林の森林簿。国有林は「国有林」ボタンで加わります')+'）');lg.append(t)}
 }
 
 function renderKK(p){
@@ -1069,16 +1077,16 @@ function kkStyle(f){const c=filt((tint==='species'||tint==='age')?kkTint(f.prope
   if(mlabelOf(f.properties))return{color:'#dc2626',weight:2.5,opacity:1,dashArray:'6 4',fillColor:c||'#dc2626',fillOpacity:c?.6:.22};
   return c?{color:'#0e7490',weight:1,opacity:.8,fillColor:c,fillOpacity:.55}:{color:'#0e7490',weight:1.2,opacity:.8,dashArray:'4 3',fillColor:'#0e7490',fillOpacity:.07}}
 // まとめた版は国有林を区画ごとのファイルに分け、画面に映った所だけ読む（通信量を減らす）
-let kkParts=null;const kkPartLoaded={};
+let kkParts=null,kkSum=null,kkSumLoading=null;const kkPartLoaded={};
 const kkOpts=()=>({style:kkStyle,onEachFeature:(f,l)=>{f.properties.__kk=true;l.on('click',()=>openSheet(l));applyLabel(l)}});
 function kkLoad(){
   if(kkLoading)return kkLoading;
   return kkLoading=fetch('kokuyu/index.json').then(r=>r.json()).then(m=>{
-    if(m.parts){kkParts=m.parts;
+    if(m.parts){kkParts=m.parts;kkSum=m.sum||null;
       return fetch(`kokuyu/roads.geojson?v=${m.rv||m.v}`).then(r=>r.json()).then(rd=>{
         kkRoads=L.geoJSON(rd,{style:{color:'#b45309',weight:2,opacity:.85},interactive:false});kkLayer=L.geoJSON(null,kkOpts());
         map.attributionControl.addAttribution('国有林：国土数値情報（国有林野データ）（国土交通省）を加工');
-        kkApply();kkView()})}
+        kkApply();kkView();if(tint!=='none')drawLegend()})}
     return Promise.all(['units','roads'].map(n=>fetch(`kokuyu/${n}.geojson?v=${m.v}`).then(r=>r.json())))
     .then(([u,rd])=>{
       kkRoads=L.geoJSON(rd,{style:{color:'#b45309',weight:2,opacity:.85},interactive:false});
@@ -1152,10 +1160,12 @@ function muniSetup(){
   // 選んだ市町村は、地図を拡大して（地番が見える大きさで）別の市町村へ動かしたときだけ切り替える。
   // 選んだときの移動や、市町村全体を見ている広さでは、選んだ市町村のまま
   let chosen=false;
-  const pickNow=()=>{if(chosen){chosen=false;return}if(map.getZoom()<13)return;const m=muniAt(map.getCenter());if(m)muniSel.value=m};
+  const setMuni=m=>{if(m&&muniSel.value!==m){muniSel.value=m;if(tint!=='none')drawLegend()}}; // 凡例の面積は選んでいる市町村の分
+  const pickNow=()=>{if(chosen){chosen=false;return}if(map.getZoom()<13)return;setMuni(muniAt(map.getCenter()))};
   {const m=muniAt(map.getCenter());if(m)muniSel.value=m}
   map.on('moveend',pickNow);
-  muniSel.onchange=()=>{chosen=true;setTimeout(()=>{chosen=false},4000);map.fitBounds(muniBounds(muniSel.value));toast(`${muniSel.selectedOptions[0].textContent}へ移動しました（地番の検索はこの市町村の中で行います）`)};
+  if(tint!=='none')drawLegend();
+  muniSel.onchange=()=>{chosen=true;if(tint!=='none')drawLegend();setTimeout(()=>{chosen=false},4000);map.fitBounds(muniBounds(muniSel.value));toast(`${muniSel.selectedOptions[0].textContent}へ移動しました（地番の検索はこの市町村の中で行います）`)};
 }
 document.getElementById('search').addEventListener('submit',async e=>{
   e.preventDefault();const q=document.getElementById('q').value.trim().replace(/番(地)?$/,'');
