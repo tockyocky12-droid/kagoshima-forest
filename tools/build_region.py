@@ -51,6 +51,16 @@ def add_muni(code, src):
     fs = [f for f in g['features'] if f.get('geometry') and f['geometry']['type'] in ('Polygon', 'MultiPolygon')]
     fs, bad = drop_broken(fs)
     if bad: print('座標の壊れた筆を除外:', len(bad))
+    write_cells(code, fs)
+
+def rechunk(code):
+    # 大字ごとのファイルで入れた市町村を、約2km四方のファイルに分け直す（地番の中身はそのまま）
+    d = os.path.join(KG, 'data', code); fs = []
+    for fn in sorted(os.listdir(d)):
+        if fn.endswith('.geojson'): fs += json.load(open(os.path.join(d, fn), encoding='utf-8'))['features']
+    write_cells(code, fs)
+
+def write_cells(code, fs):
     cells = {}
     for f in fs:
         p = f['properties']
@@ -123,16 +133,29 @@ def build_kokuyu():
         cs = f['geometry']['coordinates'] if f['geometry']['type'] == 'LineString' else [c for l in f['geometry']['coordinates'] for c in l]
         if any(bb[0] - .01 <= x <= bb[2] + .01 and bb[1] - .01 <= y <= bb[3] + .01 for x, y in cs):
             roads.append({'type': 'Feature', 'properties': {'name': f['properties'].get('A45_055') or ''}, 'geometry': {'type': f['geometry']['type'], 'coordinates': rnd(f['geometry']['coordinates'])}})
-    os.makedirs(os.path.join(KG, 'kokuyu'), exist_ok=True)
-    s1 = dump({'type': 'FeatureCollection', 'features': units}, os.path.join(KG, 'kokuyu', 'units.geojson'))
-    s2 = dump({'type': 'FeatureCollection', 'features': roads}, os.path.join(KG, 'kokuyu', 'roads.geojson'))
+    kd = os.path.join(KG, 'kokuyu'); os.makedirs(kd, exist_ok=True)
+    for fn in os.listdir(kd):
+        if fn.endswith('.geojson'): os.remove(os.path.join(kd, fn))
+    # 約5km四方ごとのファイルに分け、画面に映った所だけ読む（通信量を減らす）
+    KC = 0.05; cells = {}
+    for f in units:
+        cs = coords(f['geometry']); cx = sum(c[0] for c in cs) / len(cs); cy = sum(c[1] for c in cs) / len(cs)
+        cells.setdefault((int(cx // KC), int(cy // KC)), []).append(f)
+    parts = []
+    for (ix, iy), lst in sorted(cells.items()):
+        fn = f'u{ix}_{iy}.geojson'; t = dump({'type': 'FeatureCollection', 'features': lst}, os.path.join(kd, fn))
+        parts.append({'file': fn, 'bbox': bbox_of(lst), 'count': len(lst), 'v': ver(t)})
+    s2 = dump({'type': 'FeatureCollection', 'features': roads}, os.path.join(kd, 'roads.geojson'))
     meta = {'source': '国土交通省 国土数値情報（国有林野データ）A45 令和6年度（林野庁「国有林GISデータ（令和6年度版）」）', 'bbox': bb,
-            'units': len(units), 'roads': len(roads), 'ha': round(sum(f['properties'].get('ha') or 0 for f in units), 1), 'v': ver(s1 + s2)}
+            'units': len(units), 'roads': len(roads), 'ha': round(sum(f['properties'].get('ha') or 0 for f in units), 1),
+            'v': ver(''.join(p['v'] for p in parts) + s2), 'rv': ver(s2), 'parts': parts}
     json.dump(meta, open(os.path.join(KG, 'kokuyu', 'index.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    print('国有林:', meta)
+    print('国有林:', meta['units'], '小班', len(parts), 'ファイル')
 
 if __name__ == '__main__':
     a = sys.argv[1:]
+    if a and a[0] == 'rechunk':
+        for code in a[1:]: rechunk(code)
     if a and a[0] == 'add':
         for code, src in zip(a[1::2], a[2::2]): add_muni(code, src)
     build_index(); build_kokuyu()

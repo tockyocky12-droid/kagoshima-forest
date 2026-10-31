@@ -353,7 +353,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31x</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31y</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -845,7 +845,7 @@ function drawLegend(){
     if(tot&&a){const pc=document.createElement('small');pc.textContent=` ${(a/tot*100).toFixed(0)}%`;v.append(pc)}
     row.append(b,v,o);lg.append(row)});
   if(tot){const t=document.createElement('div');t.className='lgtot';t.append(`合計 ${unit==='ha'?Math.round(tot).toLocaleString()+' ha':tot+' 地番'}`);
-    if(unit==='ha')t.append(document.createElement('br'),kkOn?'（民有林の森林簿＋国有林）':'（民有林の森林簿。国有林は「国有林」ボタンで加わります）');lg.append(t)}
+    if(unit==='ha')t.append(document.createElement('br'),kkOn?(kkParts?'（民有林の森林簿＋国有林。国有林は地図で見た範囲の分）':'（民有林の森林簿＋国有林）'):'（民有林の森林簿。国有林は「国有林」ボタンで加わります）');lg.append(t)}
 }
 
 function renderKK(p){
@@ -1062,16 +1062,31 @@ function kkStyle(f){const c=filt((tint==='species'||tint==='age')?kkTint(f.prope
   if(selected&&selected.feature===f)return{color:'#facc15',weight:3,opacity:1,dashArray:null,fillColor:c||'#facc15',fillOpacity:c?.75:.25};
   if(mlabelOf(f.properties))return{color:'#dc2626',weight:2.5,opacity:1,dashArray:'6 4',fillColor:c||'#dc2626',fillOpacity:c?.6:.22};
   return c?{color:'#0e7490',weight:1,opacity:.8,fillColor:c,fillOpacity:.55}:{color:'#0e7490',weight:1.2,opacity:.8,dashArray:'4 3',fillColor:'#0e7490',fillOpacity:.07}}
+// まとめた版は国有林を区画ごとのファイルに分け、画面に映った所だけ読む（通信量を減らす）
+let kkParts=null;const kkPartLoaded={};
+const kkOpts=()=>({style:kkStyle,onEachFeature:(f,l)=>{f.properties.__kk=true;l.on('click',()=>openSheet(l));applyLabel(l)}});
 function kkLoad(){
   if(kkLoading)return kkLoading;
-  return kkLoading=fetch('kokuyu/index.json').then(r=>r.json()).then(m=>Promise.all(['units','roads'].map(n=>fetch(`kokuyu/${n}.geojson?v=${m.v}`).then(r=>r.json()))))
+  return kkLoading=fetch('kokuyu/index.json').then(r=>r.json()).then(m=>{
+    if(m.parts){kkParts=m.parts;
+      return fetch(`kokuyu/roads.geojson?v=${m.rv||m.v}`).then(r=>r.json()).then(rd=>{
+        kkRoads=L.geoJSON(rd,{style:{color:'#b45309',weight:2,opacity:.85},interactive:false});kkLayer=L.geoJSON(null,kkOpts());
+        map.attributionControl.addAttribution('国有林：国土数値情報（国有林野データ）（国土交通省）を加工');
+        kkApply();kkView()})}
+    return Promise.all(['units','roads'].map(n=>fetch(`kokuyu/${n}.geojson?v=${m.v}`).then(r=>r.json())))
     .then(([u,rd])=>{
       kkRoads=L.geoJSON(rd,{style:{color:'#b45309',weight:2,opacity:.85},interactive:false});
       kkLayer=L.geoJSON(u,{style:kkStyle,onEachFeature:(f,l)=>{f.properties.__kk=true;l.on('click',()=>openSheet(l));applyLabel(l)}});
       map.attributionControl.addAttribution('国有林：国土数値情報（国有林野データ）（国土交通省）を加工');
       kkApply();if(tint!=='none')drawLegend();
-    }).catch(()=>{kkLoading=null;toast('国有林のデータを読み込めませんでした')});
+    })}).catch(()=>{kkLoading=null;toast('国有林のデータを読み込めませんでした')});
 }
+const kkPartsIn=b=>(kkParts||[]).filter(p=>b.intersects(bboxBounds(p.bbox)));
+function kkLoadParts(list){return Promise.all(list.map(p=>kkPartLoaded[p.file]||(kkPartLoaded[p.file]=fetch(`kokuyu/${p.file}?v=${p.v}`)
+  .then(r=>{if(!r.ok)throw 0;return r.json()}).then(gj=>{kkLayer.addData(gj);if(map.hasLayer(kkLayer))kkLayer.bringToBack();if(tint!=='none')drawLegend()})
+  .catch(()=>{delete kkPartLoaded[p.file]}))))}
+function kkView(){if(kkParts&&kkLayer&&kkOn&&map.getZoom()>=MINZ)kkLoadParts(kkPartsIn(map.getBounds()))}
+map.on('moveend',kkView);
 function kkApply(){
   document.getElementById('kk').setAttribute('aria-pressed',kkOn);
   // 民有林（地番）と同じ拡大率から表示する
@@ -1471,6 +1486,7 @@ async function trkParcels(r){
   const rb=L.latLngBounds(pts.map(q=>[q[0],q[1]]));
   await Promise.all(districts.filter(d=>rb.intersects(bboxBounds(d.bbox))).map(loadDistrict));
   if(!kkLayer){try{await kkLoad()}catch(_){}}
+  if(kkParts)await kkLoadParts(kkPartsIn(rb));
   const hits=[];
   const test=(l,kk)=>{const g=l.feature&&l.feature.geometry;if(!g)return;const b=l.getBounds();if(!b.intersects(rb))return;
     let n=0;for(const q of pts){if(b.contains([q[0],q[1]])&&inGeom(g,q[1],q[0]))n++}if(n)hits.push({l,kk,n})};
