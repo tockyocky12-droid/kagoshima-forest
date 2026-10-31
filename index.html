@@ -355,7 +355,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01b</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01c</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -789,8 +789,13 @@ function rawTint(f){
   if(tint==='age'){if(!sp[3]||sp[0]!=='人工林'&&sp[0]!=='天然林')return null;return AGES.find(x=>x[2](sp[3]))[1]}
   return null;
 }
+// まとめた版：選んでいない市町村の地番・国有林は、灰色の細い線だけで薄く出す（押すとその市町村に切り替わる）
+function otherMuni(p){if(!MULTI)return false;const v=document.getElementById('muni').value;if(!v)return false;
+  return p.__kk?(p.mn&&p.mn!==(MUNI[v]||{}).name):(p.__m&&p.__m!==v)}
+const DIM=()=>({color:isPhoto()?'#e5e7eb':'#9ca3af',weight:.7,opacity:.8,dashArray:null,fillOpacity:0});
 function styleFor(f){
   const sel=selected&&selected.feature===f;
+  if(!sel&&otherMuni(f.properties))return DIM();
   const tc=tint!=='none'?tintColor(f):null;
   if(sel)return {color:'#facc15',weight:3,fillOpacity:tc?.75:.25,fillColor:tc||'#facc15'};
   if(bassaiOf(f.properties)||mlabelOf(f.properties))return {color:'#dc2626',weight:2.5,dashArray:'6 4',fillOpacity:tc?.6:.22,fillColor:tc||'#dc2626'};
@@ -932,7 +937,11 @@ function renderForest(p){
 }
 // 県の森林簿ダウンロードのページへのリンク（いつでも開けるように）
 function dlLink(){const a=document.createElement('a');a.href=CFG.csvUrl||'https://www.pref.kagoshima.jp/ad12/shinrin-open.html';a.target='_blank';a.rel='noopener';a.textContent='県のダウンロードページ';return a}
+// 市町村が変わったら、地図の色と凡例をその市町村に合わせる
+function applyMuni(){if(parcels)parcels.setStyle(styleFor);if(kkLayer)kkLayer.setStyle(kkStyle);if(tint!=='none')drawLegend()}
 function openSheet(layer){
+  if(MULTI){const p=layer.feature.properties,mc=p.__kk?MUNI_BY_NAME[p.mn]:p.__m,sel=document.getElementById('muni');
+    if(mc&&sel.value&&mc!==sel.value){sel.value=mc;applyMuni();toast(`${(MUNI[mc]||{}).name}に切り替えました`)}}
   const prev=selected;selected=layer;if(prev)resetL(prev);layer.setStyle(styleOf(layer));layer.bringToFront();
   const p=layer.feature.properties;currentKey=keyOf(p);
   const kk=!!p.__kk;
@@ -1072,7 +1081,7 @@ function kkTint(p){
   if(tint==='age'&&s[1]){const k=Math.ceil(Number(s[1])/5);if(k>0)return AGES.find(x=>x[2](k))[1]}
   return null;
 }
-function kkStyle(f){const c=filt((tint==='species'||tint==='age')?kkTint(f.properties):tint==='rireki'?rirekiColor(f.properties):tint==='own'?OWN_KK:null);
+function kkStyle(f){if(!(selected&&selected.feature===f)&&otherMuni(f.properties))return DIM();const c=filt((tint==='species'||tint==='age')?kkTint(f.properties):tint==='rireki'?rirekiColor(f.properties):tint==='own'?OWN_KK:null);
   if(selected&&selected.feature===f)return{color:'#facc15',weight:3,opacity:1,dashArray:null,fillColor:c||'#facc15',fillOpacity:c?.75:.25};
   if(mlabelOf(f.properties))return{color:'#dc2626',weight:2.5,opacity:1,dashArray:'6 4',fillColor:c||'#dc2626',fillOpacity:c?.6:.22};
   return c?{color:'#0e7490',weight:1,opacity:.8,fillColor:c,fillOpacity:.55}:{color:'#0e7490',weight:1.2,opacity:.8,dashArray:'4 3',fillColor:'#0e7490',fillOpacity:.07}}
@@ -1160,12 +1169,12 @@ function muniSetup(){
   // 選んだ市町村は、地図を拡大して（地番が見える大きさで）別の市町村へ動かしたときだけ切り替える。
   // 選んだときの移動や、市町村全体を見ている広さでは、選んだ市町村のまま
   let chosen=false;
-  const setMuni=m=>{if(m&&muniSel.value!==m){muniSel.value=m;if(tint!=='none')drawLegend()}}; // 凡例の面積は選んでいる市町村の分
+  const setMuni=m=>{if(m&&muniSel.value!==m){muniSel.value=m;applyMuni()}}; // 色と凡例の面積は選んでいる市町村の分
   const pickNow=()=>{if(chosen){chosen=false;return}if(map.getZoom()<13)return;setMuni(muniAt(map.getCenter()))};
   {const m=muniAt(map.getCenter());if(m)muniSel.value=m}
   map.on('moveend',pickNow);
-  if(tint!=='none')drawLegend();
-  muniSel.onchange=()=>{chosen=true;if(tint!=='none')drawLegend();setTimeout(()=>{chosen=false},4000);map.fitBounds(muniBounds(muniSel.value));toast(`${muniSel.selectedOptions[0].textContent}へ移動しました（地番の検索はこの市町村の中で行います）`)};
+  applyMuni();
+  muniSel.onchange=()=>{chosen=true;applyMuni();setTimeout(()=>{chosen=false},4000);map.fitBounds(muniBounds(muniSel.value));toast(`${muniSel.selectedOptions[0].textContent}へ移動しました（地番の検索はこの市町村の中で行います）`)};
 }
 document.getElementById('search').addEventListener('submit',async e=>{
   e.preventDefault();const q=document.getElementById('q').value.trim().replace(/番(地)?$/,'');
