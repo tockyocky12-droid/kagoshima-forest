@@ -109,6 +109,18 @@ def build_index():
     c = c[:i] + '  munis:' + json.dumps(cfg, ensure_ascii=False, separators=(',', ':')) + c[j:]
     open(cp, 'w', encoding='utf-8').write(c)
 
+def kk_sum(units):
+    # 市町村ごとに、国有林の（主な樹種, 林齢）ごとの面積を集計する。凡例の面積に使う（区画を全部読まずに済む）
+    agg = {}
+    for f in units:
+        p = f['properties']; sp = (p.get('sp') or [[None, None]])[0]
+        k = (p.get('mn'), sp[0], sp[1] if len(sp) > 1 else None)
+        agg[k] = agg.get(k, 0) + (p.get('ha') or 0)
+    out = {}
+    for (mn, sp, age), ha in sorted(agg.items(), key=lambda x: str(x[0])):
+        if mn: out.setdefault(mn, []).append([sp, age, round(ha, 2)])
+    return out
+
 def build_kokuyu():
     names = {m['name'] for m in MUNIS.values()}
     z = zipfile.ZipFile(A45)
@@ -148,7 +160,7 @@ def build_kokuyu():
     s2 = dump({'type': 'FeatureCollection', 'features': roads}, os.path.join(kd, 'roads.geojson'))
     meta = {'source': '国土交通省 国土数値情報（国有林野データ）A45 令和6年度（林野庁「国有林GISデータ（令和6年度版）」）', 'bbox': bb,
             'units': len(units), 'roads': len(roads), 'ha': round(sum(f['properties'].get('ha') or 0 for f in units), 1),
-            'v': ver(''.join(p['v'] for p in parts) + s2), 'rv': ver(s2), 'parts': parts}
+            'v': ver(''.join(p['v'] for p in parts) + s2), 'rv': ver(s2), 'parts': parts, 'sum': kk_sum(units)}
     json.dump(meta, open(os.path.join(KG, 'kokuyu', 'index.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print('国有林:', meta['units'], '小班', len(parts), 'ファイル')
 
