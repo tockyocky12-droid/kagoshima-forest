@@ -31,6 +31,6 @@ URL：https://tockyocky12-droid.github.io/kagoshima-forest/
 - アプリ本体（index.html・sw.js）は、my-first-repo の app/ と同じものです。my-first-repo で `python3 tools/sync_towns.py` を実行すると、こちらにも写ります
 - 市町村ごとの違いは config.js（munis）と munis.json だけです
 - 市町村の足し方：munis.json と config.js に1件足し、`python3 tools/build_region.py add 市町村コード 地番.geojson`
-- 大きな市町村（鹿屋市・垂水市・曽於市など）は、地番データを約2km四方ごとのファイルに分け、画面に映った所だけ読みます。地番の検索は市町村ごとの一覧（search.json）で探し、当てはまる所だけ読みます
+- 地番データは約2km四方ごとのファイルに分け、画面に映った所だけ読みます（通信量を減らす）。国有林も約5km四方ごとに分けています。地番の検索は市町村ごとの一覧（search.json）で探し、当てはまる所だけ読みます
 - 森林簿の大字名に合併前の町名が付かない場合（「上名」と「吾平町上名」など）は、旧町名を付けて地番データの大字名と照らし合わせます
 - 容量の目安は1リポジトリ1GB。足りなくなったら、地番データを別のリポジトリに分けます

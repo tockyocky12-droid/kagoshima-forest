@@ -1,17 +1,18 @@
 // 錦江町 森林管理システム：オフラインでも開けるようにするための仕組み
-const VER='v46';
+const VER='v47';
 // この仕組みが置かれたフォルダ（例：/my-first-repo/app/）。町ごとのフォルダで同じファイルを使う
 const BASE=new URL(self.registration.scope).pathname;
 const PFX=BASE.endsWith('/app/')?'forest':BASE.split('/').filter(Boolean).pop(); // 錦江町は今までどおり「forest」
 const SHELL=PFX+'-shell-'+VER, DATA=PFX+'-data-v1', TILES=PFX+'-tiles-v1';
-const SHELL_FILES=['./','./index.html','./config.js','./manifest.webmanifest','./icon-192.png','./icon-512.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'];
+const STATIC=PFX+'-static-v1'; // 地図の部品（Leaflet）と文字（フォント）：アプリを更新しても消さない（読み直しの通信をしない）
+const SHELL_FILES=['./','./index.html','./config.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const STATIC_FILES=['https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'];
 const TILE_MAX=6000;            // 一度見た地図の画像を覚えておく枚数
 const SAVED='gsi-saved-v1';      // 「地図を端末に保存」で保存した画像（自動では消さない。どのアプリからも使う）
 
 self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(SHELL).then(c=>Promise.all(SHELL_FILES.map(u=>c.add(u).catch(()=>{})))).then(()=>self.skipWaiting()));
+  e.waitUntil(Promise.all([caches.open(SHELL).then(c=>Promise.all(SHELL_FILES.map(u=>c.add(u).catch(()=>{})))),
+    caches.open(STATIC).then(c=>Promise.all(STATIC_FILES.map(async u=>{if(!(await c.match(u)))await c.add(u).catch(()=>{})})))]).then(()=>self.skipWaiting()));
 });
 self.addEventListener('activate',e=>{
   e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(PFX+'-shell-')&&k!==SHELL).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
@@ -60,6 +61,6 @@ self.addEventListener('fetch',e=>{
   if(u.origin===location.origin&&u.pathname.startsWith(BASE+'kokuyu/')){e.respondWith(dataCache(req));return}
   // 地図の画像は保存分を先に使う（画面から直接読むもの＝保存処理や標高の計算は、そのまま通す）
   if(u.hostname==='cyberjapandata.gsi.go.jp'){if(req.destination==='image')e.respondWith(cacheFirst(req,TILES,TILE_MAX));return}
-  if(u.hostname==='cdnjs.cloudflare.com'||u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'){e.respondWith(cacheFirst(req,SHELL));return}
+  if(u.hostname==='cdnjs.cloudflare.com'||u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'){e.respondWith(cacheFirst(req,STATIC));return}
   if(u.origin===location.origin){e.respondWith(networkFirst(req,SHELL))}
 });
