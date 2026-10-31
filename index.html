@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>かごしま森林管理システム（試作）</title>
+<title>かごしま森林ナビ</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#2f6b45">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="かごしま森林">
+<meta name="apple-mobile-web-app-title" content="かごしま森林ナビ">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=BIZ+UDGothic:wght@400;700&display=swap">
@@ -230,6 +230,7 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .cg-note{font-size:12px;color:var(--muted);line-height:1.6;margin:10px 0 0}
 .cg-go{display:block;text-align:center;text-decoration:none;margin-top:14px;font-size:15px!important;padding:12px!important}
 .nof a{color:var(--accent);font-weight:700}
+.disc{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--fg)!important}
 /* 踏査ルート */
 #trk{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:900;
   width:52px;height:52px;border-radius:50%;border:0;background:var(--panel);color:#a21caf;box-shadow:0 2px 10px rgba(0,0,0,.25);cursor:pointer;
@@ -316,7 +317,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
 </head>
 <body>
 <header>
-  <h1>かごしま森林管理（試作）</h1>
+  <h1>かごしま森林ナビ</h1>
   <div class="seg" role="group" aria-label="背景地図">
     <button id="bm-std" aria-pressed="true">地図</button>
     <button id="bm-photo" aria-pressed="false">写真</button>
@@ -353,7 +354,8 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31z</span></p>
+    <p class="rp-note disc" hidden></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01a</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -402,6 +404,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <li>この画面に戻り、上の「森林簿CSVを読み込む」で、ダウンロードしたCSVを選びます（いくつでもまとめて選べます）。</li>
     </ol>
     <a id="cg-go" class="pbtn cg-go" target="_blank" rel="noopener">県の森林簿ダウンロードのページを開く</a>
+    <p class="cg-note disc" hidden></p>
     <p class="cg-note">読み込んだ森林簿はこの端末の中だけに保存され、外には送られません。利用の条件（複製・転売の禁止など）は県のページで確認してください。この案内は最初の一度だけ出ます。あとからは、地番のカードの「森林簿」タブからも県のページを開けます。</p>
     <div class="rp-btns" style="margin-top:10px"><button id="cg-later" class="pbtn ghost2" type="button">あとで</button></div>
   </div>
@@ -513,6 +516,8 @@ const CFG=Object.assign({id:'kinko',title:'錦江町森林管理システム',ns
   center:[31.215,130.79],oazaAlias:{'麓':'田代麓','川原':'田代川原'},town:{'田代麓':'田代町','田代川原':'田代町','神川':'大根占町','馬場':'大根占町','城元':'大根占町'},
   townList:['田代町','大根占町'],csvHint:'錦江町分の森林簿CSV（田代町・大根占町の2ファイル）',kkOffice:'大隅森林管理署'},window.CFG||{});
 document.title=CFG.title;document.querySelector('header h1').textContent=CFG.h1||CFG.title;
+// 非公式であることの断り書き（config.js に disclaimer がある版だけ。初回の案内と「⇅」の画面に出す）
+if(CFG.disclaimer)document.querySelectorAll('.disc').forEach(e=>{e.textContent=CFG.disclaimer;e.hidden=false});
 // 端末への保存は町ごとに分ける（錦江町は今までどおりの名前、ほかの町は「町名/」を頭に付ける）
 const LS={_k:null,
   getItem(k){return localStorage.getItem(CFG.ns+k)},setItem(k,v){localStorage.setItem(CFG.ns+k,v);this._k=null},removeItem(k){localStorage.removeItem(CFG.ns+k);this._k=null},
