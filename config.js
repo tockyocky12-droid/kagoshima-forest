@@ -10,6 +10,7 @@ window.CFG={
   filePrefix:'kagoshima-kiroku',
   center:[31.2,130.85],
   csvHint:'使う市町村の森林簿CSV（いくつでも足せます）',
+  csvUrl:'https://www.pref.kagoshima.jp/ad12/shinrin-open.html', // 県の森林資源情報オープンデータのページ（初回に案内する）
   kkOffice:'森林管理署',
   // 町ごとの版の記録ファイルを取り込むとき、どの市町村の記録かを決める
   importFrom:{'kinko-forest':'46490','minamiosumi-forest':'46491','kimotsuki-forest':'46492'},
