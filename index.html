@@ -353,7 +353,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31u</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31v</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -713,7 +713,7 @@ const townOf=k=>{if(!MULTI)return TOWN[k]||k;const i=k.indexOf('|'),m=MUNI[k.sli
 const countRows=d=>{const s=new Set();Object.values(d).forEach(o=>Object.values(o).forEach(a=>a.forEach(r=>s.add(r))));return s.size};
 function setForest(obj){
   forest=obj&&obj.data||{};const rows=countRows(forest);forestLoaded=rows>0;
-  const towns=[...new Set(Object.keys(forest).map(townOf))].filter(Boolean);
+  const towns=[...new Set(Object.keys(forest).sort().map(townOf))].filter(Boolean); // まとめた版は建制順
   const missing=MULTI?[...new Set(Object.keys(forest).map(k=>k.split('|')[0]))].flatMap(mc=>(MUNI[mc].townList||[]).map(t=>`${MUNI[mc].name}（${t}）`)).filter(t=>!towns.includes(t))
     :CFG.townList.filter(t=>!towns.includes(t));
   const b=document.getElementById('fload');
@@ -1121,7 +1121,7 @@ function muniAt(c){const hit=districts.filter(d=>bboxBounds(d.bbox).contains(c))
   // 大字の範囲が重なるときは、一番多く当てはまる市町村
   const n={};hit.forEach(m=>n[m]=(n[m]||0)+1);return Object.keys(n).sort((a,b)=>n[b]-n[a])[0]}
 function muniSetup(){
-  const ms=[...new Set(districts.map(d=>d.m))];
+  const ms=[...new Set(districts.map(d=>d.m))].sort(); // 建制順（市町村コードの順）
   ms.forEach(mc=>{const o=document.createElement('option');o.value=mc;o.textContent=(MUNI[mc]||{}).name||mc;muniSel.append(o)});
   muniSel.hidden=false;const q=document.getElementById('q');q.placeholder='地番で探す';
   const pickNow=()=>{const m=muniAt(map.getCenter());if(m)muniSel.value=m};
