@@ -353,7 +353,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31y</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31z</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -723,7 +723,8 @@ function setForest(obj){
   const note=document.getElementById('fmiss');
   note.hidden=!(forestLoaded&&missing.length);note.textContent=missing.length?`${missing.join('・')}の森林簿が未読込です`:'';
   // 両方の町を読み込んだら上の段のボタンは隠す（読み込み直しは森林簿タブの下から）
-  b.parentElement.hidden=!MULTI&&forestLoaded&&!missing.length; // まとめた版はほかの市町村を足せるよう、いつも出す
+  // 読み込みが済んだら上の段のボタンは隠す（ほかの市町村を足すときは、その市町村の地番のカード、または森林簿タブの下から）
+  b.parentElement.hidden=forestLoaded&&!missing.length;
   if(parcels)parcels.setStyle(styleFor);
   if(tint!=='none'&&tint!=='rireki')drawLegend();
   if(selected)openSheet(selected);
