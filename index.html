@@ -119,7 +119,7 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 #tint .fwrap{margin-left:0}
 .fwrap[hidden],[hidden]{display:none!important}
 .hbtn{border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit;font-size:16px;border-radius:8px;width:36px;height:32px;cursor:pointer;flex:none}
-#recp,#trkp,#mkp{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;
+#recp,#trkp,#mkp,#csvg{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;
   padding:calc(env(safe-area-inset-top,0px) + 56px) max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));overflow:auto}
 .rp-card{background:var(--panel);color:var(--fg);border-radius:14px;padding:16px;max-width:460px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 .rp-top{display:flex;align-items:center;justify-content:space-between}
@@ -223,6 +223,12 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .kkpop .src{font-size:10px;color:#5f6d63;margin-top:6px}
 .lbtn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
 #tint{flex-wrap:wrap}
+/* 森林簿のダウンロード案内（初回だけ） */
+.cg-steps{margin:10px 0 0;padding-left:1.4em;font-size:14px;line-height:1.7}
+.cg-steps li{margin-bottom:4px}
+.cg-note{font-size:12px;color:var(--muted);line-height:1.6;margin:10px 0 0}
+.cg-go{display:block;text-align:center;text-decoration:none;margin-top:14px;font-size:15px!important;padding:12px!important}
+.nof a{color:var(--accent);font-weight:700}
 /* 踏査ルート */
 #trk{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:900;
   width:52px;height:52px;border-radius:50%;border:0;background:var(--panel);color:#a21caf;box-shadow:0 2px 10px rgba(0,0,0,.25);cursor:pointer;
@@ -346,7 +352,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31q</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31r</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -383,6 +389,20 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <button id="trk-start" class="pbtn trk-start" type="button">踏査を始める</button>
     <p class="trk-note">歩いた道筋を地図に記録します。GPSは携帯の電波を使わないので、圏外でも記録できます（地図は保存した分が出ます）。<br>記録できるのはこの画面を出している間だけです。画面を消したり、ほかのアプリに切り替えたりすると、その間は記録されません。記録中は画面が自動で消えないようにします（電池の減りが早くなります）。<br>誤差は開けた場所で5〜10m、林内や谷では10〜30mほどです。境界の確定には使えません。</p>
     <div id="trk-list"></div>
+  </div>
+</div>
+<div id="csvg" hidden>
+  <div class="rp-card" role="dialog" aria-labelledby="cg-ttl">
+    <div class="rp-top"><h2 id="cg-ttl">はじめに：森林簿を読み込む</h2><button id="cg-close" class="close" type="button" aria-label="閉じる">×</button></div>
+    <p class="cg-note" style="font-size:13.5px;color:var(--fg)">樹種・林齢・所有形態などを見るには、鹿児島県が公開している森林簿（CSV）が必要です。最初に一度だけ、次の手順で読み込んでください。</p>
+    <ol class="cg-steps">
+      <li>下のボタンで県のページを開き、「森林簿」のデータのページへ進みます。</li>
+      <li>使う市町村のCSVをダウンロードします（合併前の町ごとに分かれています）。</li>
+      <li>この画面に戻り、上の「森林簿CSVを読み込む」で、ダウンロードしたCSVを選びます（いくつでもまとめて選べます）。</li>
+    </ol>
+    <a id="cg-go" class="pbtn cg-go" target="_blank" rel="noopener">県の森林簿ダウンロードのページを開く</a>
+    <p class="cg-note">読み込んだ森林簿はこの端末の中だけに保存され、外には送られません。利用の条件（複製・転売の禁止など）は県のページで確認してください。この案内は最初の一度だけ出ます。あとからは、地番のカードの「森林簿」タブからも県のページを開けます。</p>
+    <div class="rp-btns" style="margin-top:10px"><button id="cg-later" class="pbtn ghost2" type="button">あとで</button></div>
   </div>
 </div>
 <div id="mkp" hidden>
@@ -723,7 +743,15 @@ async function onForestFiles(e){
     catch(_){toast(`${towns}の森林簿 ${add.rows.toLocaleString()} 件を読み込みました。端末に保存できなかったので、次回また読み込んでください`)}
   }catch(err){toast(err.message||'森林簿を読み込めませんでした')}
 }
-idb.get('forest').then(o=>{if(o)setForest(o)}).catch(()=>{});
+idb.get('forest').then(o=>{if(o)setForest(o);else csvGuide()}).catch(()=>csvGuide());
+// 森林簿のダウンロード案内：森林簿がまだ無い端末で、最初の一度だけ出す（config.js に csvUrl がある版だけ）
+function csvGuide(){
+  if(!CFG.csvUrl)return;try{if(LS.getItem('ui:csvguide'))return;LS.setItem('ui:csvguide','1')}catch(e){return}
+  const g=document.getElementById('csvg');document.getElementById('cg-go').href=CFG.csvUrl;g.hidden=false;
+  const close=()=>{g.hidden=true};
+  document.getElementById('cg-close').onclick=close;document.getElementById('cg-later').onclick=close;
+  g.addEventListener('click',e=>{if(e.target.id==='csvg')close()});
+}
 const nz=s=>String(s||'').normalize('NFKC').trim();
 const forestOf=p=>{const o=forest[fkey(p)];return o?(o[nz(chibanOf(p))]||null):null};
 const mainRec=recs=>recs.reduce((a,b)=>((b.a||0)>(a.a||0)?b:a));
@@ -846,6 +874,7 @@ function renderForest(p){
   if(!forestLoaded){
     const n=document.createElement('div');n.className='nof';
     n.append('森林簿が読み込まれていません。鹿児島県のサイトから、'+CFG.csvHint+'をダウンロードして読み込んでください。一度読み込めば、この端末に保存されます。');
+    if(CFG.csvUrl){const a=document.createElement('a');a.href=CFG.csvUrl;a.target='_blank';a.rel='noopener';a.textContent='県の森林簿ダウンロードのページを開く';n.append(document.createElement('br'),a)}
     const r=document.createElement('div');r.className='frow';
     const b=document.createElement('span');b.className='fwrap';const bs=document.createElement('span');bs.className='fbtn';bs.textContent='CSVを読み込む';const bi=document.createElement('input');bi.type='file';bi.accept='.csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain';bi.multiple=true;bi.className='fover';bi.setAttribute('aria-label','森林簿CSVを選ぶ');bi.addEventListener('change',onForestFiles);b.append(bs,bi);
     const a=document.createElement('a');a.href='https://www.pref.kagoshima.jp/ad12/shinrin-open.html';a.target='_blank';a.rel='noopener';a.textContent='県のダウンロードページ';
