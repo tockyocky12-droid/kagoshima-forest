@@ -55,7 +55,7 @@ header h1{font-size:16px;margin:0;font-weight:700;flex:1;min-width:0;white-space
 .coz{grid-area:oz;font-size:14px;min-width:0}
 .csum{grid-area:sum;font-size:12px;color:var(--muted);min-width:0}
 .cbas{font-size:11px;color:#dc2626;border:1px solid #dc2626;border-radius:999px;padding:0 6px}
-#locate{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:900;
+#locate{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(34px + env(safe-area-inset-bottom,0px));z-index:900;
   width:52px;height:52px;border-radius:50%;border:0;background:var(--panel);color:var(--accent);box-shadow:0 2px 10px rgba(0,0,0,.25);cursor:pointer;display:grid;place-items:center}
 #locate.on{background:var(--accent);color:var(--accent-fg)}
 #locate svg{width:26px;height:26px}
@@ -232,11 +232,18 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .nof a{color:var(--accent);font-weight:700}
 .disc{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--fg)!important}
 /* 踏査ルート */
-#trk{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:900;
-  width:52px;height:52px;border-radius:50%;border:0;background:var(--panel);color:#a21caf;box-shadow:0 2px 10px rgba(0,0,0,.25);cursor:pointer;
-  display:grid;place-items:center;align-content:center;gap:0;font:inherit;font-size:11px;font-weight:700;line-height:1;padding:0}
-#trk svg{width:22px;height:22px;margin-bottom:2px}
-#trk.rec{background:#a21caf;color:#fff}
+/* 踏査ボタン：丸い現在地ボタンと見分けやすいよう、紫の横長ボタンに「道筋とピン」の絵と文字 */
+#trk{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(102px + env(safe-area-inset-bottom,0px));z-index:900;
+  height:48px;border-radius:24px;border:2px solid #fff;background:#a21caf;color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;
+  display:flex;align-items:center;gap:6px;font:inherit;font-size:15px;font-weight:700;line-height:1;padding:0 16px 0 12px;white-space:nowrap}
+#trk svg{width:24px;height:24px;flex:none}
+#trk .rdot{display:none;width:10px;height:10px;border-radius:50%;background:#fff;animation:tbb 1.2s infinite}
+#trk.rec{background:#dc2626}
+#trk.rec .rdot{display:inline-block}
+#trk.rec svg{display:none}
+/* 出典の文字：ふだんは1行にたたみ、押すと全部出す（ボタンに重ならないように） */
+.leaflet-control-attribution.fold{max-width:calc(100vw - 100px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.leaflet-control-attribution{font-size:10.5px;line-height:1.4}
 #trkbar{position:absolute;top:8px;left:8px;right:8px;z-index:960;background:var(--panel);color:var(--fg);border:2px solid #a21caf;border-radius:12px;padding:8px 10px;box-shadow:0 3px 12px rgba(0,0,0,.25);font-family:var(--f-data)}
 body.trk-on #zhint{display:none!important}
 body.trk-on .leaflet-top.leaflet-left{top:98px}
@@ -305,6 +312,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
   #sheet{left:auto;right:0;top:var(--toph,142px);bottom:0;width:420px;max-height:none;border-radius:0;border-top:0;border-left:1px solid var(--line);box-shadow:-4px 0 16px rgba(0,0,0,.12);padding-block:14px 16px;padding-left:18px;padding-right:18px}
   #sheet.min{top:auto;bottom:0;width:420px;border-top:1px solid var(--line);border-radius:14px 0 0 0}
   body:has(#sheet:not([hidden]):not(.min)) #locate,body:has(#sheet:not([hidden]):not(.min)) #trk{right:calc(420px + 14px)}
+  .leaflet-control-attribution.fold{max-width:calc(100vw - 520px)}
   #trkbar{right:auto;width:480px}
   body:has(#sheet:not([hidden]):not(.min)) .leaflet-control-attribution{margin-right:420px}
   #cands{right:auto;width:440px;max-height:75%;border-right:1px solid var(--line);border-radius:0 0 12px 0}
@@ -355,7 +363,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01c</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01d</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -385,7 +393,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <div class="tb-btns"><button type="button" class="tb-save" id="tb-save">保存して終了</button><button type="button" id="tb-back">記録に戻る</button><button type="button" class="tb-discard" id="tb-discard">捨てる</button></div></div>
 </div></div>
 <div id="legend" hidden></div>
-<button id="trk" type="button" aria-label="踏査ルート"><svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="8" cy="7" rx="2.6" ry="3.6"/><ellipse cx="15.5" cy="12.5" rx="2.6" ry="3.6"/><rect x="6.4" y="11.6" width="3.2" height="2.6" rx="1.3"/><rect x="13.9" y="17.1" width="3.2" height="2.6" rx="1.3"/></svg>踏査</button>
+<button id="trk" type="button" aria-label="踏査ルート"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="19" r="2.2" fill="currentColor" stroke="none"/><path d="M7.5 19H13a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h1.5" stroke-dasharray="2.2 2.6"/><path d="M18 2.5a3.6 3.6 0 0 1 3.6 3.6c0 2.7-3.6 6.1-3.6 6.1s-3.6-3.4-3.6-6.1A3.6 3.6 0 0 1 18 2.5z" fill="currentColor" stroke="none"/><circle cx="18" cy="6.1" r="1.3" fill="#a21caf" stroke="none"/></svg><i class="rdot"></i><span id="trk-lbl">踏査</span></button>
 <div id="trkp" hidden>
   <div class="rp-card" role="dialog" aria-labelledby="trk-ttl">
     <div class="rp-top"><h2 id="trk-ttl">踏査ルート</h2><button id="trk-close" class="close" type="button" aria-label="閉じる">×</button></div>
@@ -528,6 +536,7 @@ const LS={_k:null,
 const savedView=(()=>{try{const v=JSON.parse(LS.getItem('ui:view')||'null');return v&&isFinite(v.lat)&&isFinite(v.lng)&&isFinite(v.z)?v:null}catch(e){return null}})();
 const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView(savedView?[savedView.lat,savedView.lng]:CFG.center,savedView?savedView.z:13);
 let svT;map.on('moveend',()=>{clearTimeout(svT);svT=setTimeout(()=>{try{const c=map.getCenter();LS.setItem('ui:view',JSON.stringify({lat:+c.lat.toFixed(6),lng:+c.lng.toFixed(6),z:map.getZoom()}))}catch(e){}},500)});
+{const a=map.attributionControl.getContainer();a.classList.add('fold');a.title='押すと出典をすべて表示';a.addEventListener('click',e=>{if(e.target.tagName!=='A')a.classList.toggle('fold')})}
 const gsiAttr='<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル</a>';
 // 地図の画像が読めないとき（圏外で、保存していない拡大レベルなど）は、1〜4段階粗い画像を引き伸ばして出す
 const FallbackTileLayer=L.TileLayer.extend({
@@ -1317,7 +1326,7 @@ async function routeStore(r){await idb.set('trk:'+r.id,r)}
 // 記録
 function trkUI(){
   const on=!!trk;document.body.classList.toggle('trk-on',on);document.getElementById('trkbar').hidden=!on;
-  document.getElementById('trk').classList.toggle('rec',on);
+  document.getElementById('trk').classList.toggle('rec',on);document.getElementById('trk-lbl').textContent=on?'記録中':'踏査';
   const st=document.getElementById('trk-start');st.disabled=on;st.textContent=on?'記録中です（地図の上の欄で操作）':'踏査を始める';
   if(!on)return;
   const pz=!trk.runAt,s=document.getElementById('tb-state');s.className='tb-rec'+(pz?' pz':'');s.lastChild.textContent=pz?'一時停止中':'記録中';
