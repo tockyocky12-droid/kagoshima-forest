@@ -152,6 +152,7 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .fbtn.part{border-color:#d97706;color:#d97706}
 .fmiss{font-size:12px;color:#d97706}
 .freload{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}
+.freload a{color:var(--accent);font-size:12px}
 .freload .fbtn{background:transparent!important;color:var(--fg)!important;border:1px dashed var(--muted)!important;font-size:12px!important;padding:6px 10px!important}
 .fcount{font-size:11px;color:var(--muted)}
 .mapinfo{margin-top:12px;font-size:13px;color:var(--muted)}
@@ -352,7 +353,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31r</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-10-31s</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -874,11 +875,15 @@ function renderForest(p){
   if(!forestLoaded){
     const n=document.createElement('div');n.className='nof';
     n.append('森林簿が読み込まれていません。鹿児島県のサイトから、'+CFG.csvHint+'をダウンロードして読み込んでください。一度読み込めば、この端末に保存されます。');
-    if(CFG.csvUrl){const a=document.createElement('a');a.href=CFG.csvUrl;a.target='_blank';a.rel='noopener';a.textContent='県の森林簿ダウンロードのページを開く';n.append(document.createElement('br'),a)}
     const r=document.createElement('div');r.className='frow';
     const b=document.createElement('span');b.className='fwrap';const bs=document.createElement('span');bs.className='fbtn';bs.textContent='CSVを読み込む';const bi=document.createElement('input');bi.type='file';bi.accept='.csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain';bi.multiple=true;bi.className='fover';bi.setAttribute('aria-label','森林簿CSVを選ぶ');bi.addEventListener('change',onForestFiles);b.append(bs,bi);
-    const a=document.createElement('a');a.href='https://www.pref.kagoshima.jp/ad12/shinrin-open.html';a.target='_blank';a.rel='noopener';a.textContent='県のダウンロードページ';
-    r.append(b,a);n.append(r);box.append(n);return}
+    r.append(b,dlLink());n.append(r);box.append(n);return}
+  // まとめた版：この市町村の森林簿がまだ無いとき
+  if(!recs&&MULTI&&p.__m&&!Object.keys(forest).some(k=>k.startsWith(p.__m+'|'))){
+    const n=document.createElement('div');n.className='nof';n.append(`${muniName(p)}の森林簿がまだ読み込まれていません。県のページから${muniName(p)}分のCSVをダウンロードし、読み込んでください（読み込み済みのほかの市町村の分は、そのまま残ります）。`);
+    const r=document.createElement('div');r.className='frow';
+    const b=document.createElement('span');b.className='fwrap';const bs=document.createElement('span');bs.className='fbtn';bs.textContent='CSVを読み込む';const bi=document.createElement('input');bi.type='file';bi.accept=document.getElementById('ffile').accept;bi.multiple=true;bi.className='fover';bi.setAttribute('aria-label','森林簿CSVを選ぶ');bi.addEventListener('change',onForestFiles);b.append(bs,bi);
+    r.append(b,dlLink());n.append(r);box.append(n);return}
   if(!recs){const n=document.createElement('div');n.className='nof';n.textContent='この地番は森林簿に載っていません。森林以外の土地か、森林簿と地図で地番の表し方が違う可能性があります。';box.append(n);return}
   recs.forEach(r=>{
     const s=document.createElement('div');s.className='fr';
@@ -907,8 +912,10 @@ function renderForest(p){
   const w=document.createElement('span');w.className='fwrap';const ws=document.createElement('span');ws.className='fbtn';ws.textContent='森林簿CSVを読み込み直す';
   const wi=document.createElement('input');wi.type='file';wi.accept=document.getElementById('ffile').accept;wi.multiple=true;wi.className='fover';wi.setAttribute('aria-label','森林簿CSVを選ぶ');wi.addEventListener('change',onForestFiles);w.append(ws,wi);
   const cnt=document.createElement('span');cnt.className='fcount';cnt.textContent=`読込済み ${countRows(forest).toLocaleString()}件・県の更新時に使います`;
-  rl.append(w,cnt);box.append(rl);
+  rl.append(w,dlLink(),cnt);box.append(rl);
 }
+// 県の森林簿ダウンロードのページへのリンク（いつでも開けるように）
+function dlLink(){const a=document.createElement('a');a.href=CFG.csvUrl||'https://www.pref.kagoshima.jp/ad12/shinrin-open.html';a.target='_blank';a.rel='noopener';a.textContent='県のダウンロードページ';return a}
 function openSheet(layer){
   const prev=selected;selected=layer;if(prev)resetL(prev);layer.setStyle(styleOf(layer));layer.bringToFront();
   const p=layer.feature.properties;currentKey=keyOf(p);
