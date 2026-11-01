@@ -371,7 +371,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <div class="rp-btns"><button id="sv-go" class="pbtn" type="button">この範囲の地図を保存</button><button id="sv-clear" class="pbtn ghost2" type="button">保存した地図を消す</button></div>
       <div class="sv-prog" id="sv-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       <div class="sv-forest">
-        <h4>町の森林をまとめて保存</h4>
+        <h4 id="svf-h">町の森林をまとめて保存</h4>
         <p>森林簿のある民有林の地番（圏外になりやすい山林）を、地番の境界がはっきり見える拡大レベル17まで保存します。町全体の大まかな地図（レベル15まで）も一緒に保存します。国有林は含みません。</p>
         <p class="sv-est" id="svf-est"></p>
         <div class="rp-btns"><button id="svf-go" class="pbtn" type="button">町の森林を保存</button><button id="svf-stop" class="pbtn ghost2" type="button" hidden>中止</button></div>
@@ -379,7 +379,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01i</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01j</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1227,10 +1227,11 @@ document.getElementById('search').addEventListener('submit',async e=>{
   let scope=MULTI?districts.filter(d=>d.m===muniSel.value):districts;
   toast(MULTI?`${muniSel.selectedOptions[0]?.textContent||''}の中を検索しています…`:'検索しています…');
   // 大きな市町村は検索用の一覧で探し、当てはまる地番のあるファイルだけ読む
-  const si=MULTI&&searchIdx[muniSel.value];
-  if(si){try{const L2=await searchList(muniSel.value,si);const need=new Set();let nb=0;
+  // 町ごとの版は data/search.json（版は地番データの版から作る）
+  const si=MULTI?searchIdx[muniSel.value]:(districts.length?{file:'search.json',v:districts.map(d=>d.v||'').join('').slice(0,120)}:null);
+  if(si){try{const L2=await searchList(MULTI?muniSel.value:'_',si);const need=new Set();let nb=0;
       for(const r of L2.rows){const c=nz(r[1]);if(c===qq)need.add(r[2]);else if(c.startsWith(qq+'-')&&nb<100){need.add(r[2]);nb++}}
-      const files=new Set([...need].map(i=>muniSel.value+'/'+L2.files[i]));scope=scope.filter(d=>files.has(d.file))}
+      const files=new Set([...need].map(i=>(MULTI?muniSel.value+'/':'')+L2.files[i]));scope=scope.filter(d=>files.has(d.file))}
     catch(_){toast('検索の一覧を読み込めませんでした。通信状態を確認してください');return}}
   await Promise.all(scope.map(loadDistrict));
   toastEl.hidden=true;
@@ -1722,7 +1723,7 @@ const KP_ATTR='森林計画図：鹿児島県（この成果品は、鹿児島�
 function kpRefresh(){if(kpLayer)kpLayer.redraw()}
 function kpApply(){
   document.getElementById('kp').setAttribute('aria-pressed',kpOn&&kpSheets.length>0);
-  if(kpOn&&kpSheets.length){if(!kpLayer)kpLayer=new KPLayer({pane:'kp',minZoom:14,maxZoom:19,opacity:.9,updateWhenZooming:false,keepBuffer:1});
+  if(kpOn&&kpSheets.length){if(!kpLayer)kpLayer=new KPLayer({pane:'kp',minZoom:14,maxZoom:18,opacity:.9,updateWhenZooming:false,keepBuffer:1});
     if(!map.hasLayer(kpLayer)){kpLayer.addTo(map);map.attributionControl.addAttribution(KP_ATTR)}}
   else if(kpLayer&&map.hasLayer(kpLayer)){kpLayer.remove();map.attributionControl.removeAttribution(KP_ATTR)}
 }
@@ -1803,10 +1804,8 @@ document.getElementById('sv-go').onclick=async()=>{
 };
 // 町の森林（森林簿のある民有林の地番）にかかる地図の画像：レベル12〜15は町全体、16・17は森林の地番だけ
 const tx=(lon,z)=>Math.floor((lon+180)/360*2**z),ty=(lat,z)=>{const s=Math.sin(lat*Math.PI/180);return Math.floor((0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*2**z)};
-async function forestTiles(withPhoto){
+async function forestTiles(withPhoto,ds){
   const set=new Set(),add=(z,x,y)=>set.add(z+'/'+x+'/'+y);
-  // まとめた版は、森林簿を読み込んだ市町村だけ
-  const ds=MULTI?districts.filter(d=>Object.keys(forest).some(k=>k.startsWith(d.m+'|'))):districts;
   const all=ds.reduce((b,d)=>[Math.min(b[0],d.bbox[0]),Math.min(b[1],d.bbox[1]),Math.max(b[2],d.bbox[2]),Math.max(b[3],d.bbox[3])],[999,999,-999,-999]);
   for(let z=12;z<=15;z++)for(let x=tx(all[0],z);x<=tx(all[2],z);x++)for(let y=ty(all[3],z);y<=ty(all[1],z);y++)add(z,x,y);
   const list=await Promise.all(ds.map(d=>fetch(dURL(d)).then(r=>r.json()).then(gj=>tagM(gj,d))));
@@ -1817,34 +1816,40 @@ async function forestTiles(withPhoto){
   const urls=[];set.forEach(k=>{const [z,x,y]=k.split('/');urls.push(`https://cyberjapandata.gsi.go.jp/xyz/std/${z}/${x}/${y}.png`);if(withPhoto)urls.push(`https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/${z}/${x}/${y}.jpg`)});
   return urls;
 }
+// 数えるには地番データを読むので、「⇅」を開いただけでは数えない（押したときだけ）。1回目で数え、2回目で保存
+// まとめた版は、選んでいる市町村だけ
 let svfList=null;
+function svfTarget(){if(!MULTI)return {ds:districts,name:'町',ok:forestLoaded};const mc=document.getElementById('muni').value;
+  return {ds:districts.filter(d=>d.m===mc),name:(MUNI[mc]||{}).name||'市町村',ok:Object.keys(forest).some(k=>k.startsWith(mc+'|'))}}
+function svfReset(){if(svBusy)return;svfList=null;const t=svfTarget(),e=document.getElementById('svf-est'),go=document.getElementById('svf-go');
+  document.getElementById('svf-h').textContent=`${t.name}の森林をまとめて保存`;go.textContent=`${t.name}の森林を保存`;
+  if(!t.ok){e.textContent=`${MULTI?t.name+'の':''}森林簿を読み込むと使えます（森林簿のある地番を保存します）。`;go.disabled=true;return}
+  e.textContent='押すと、まず保存する枚数と容量を数えます（そのために地番データを読み込みます）。';go.disabled=false}
 async function svfEstimate(){
-  const e=document.getElementById('svf-est');if(!e)return;
-  if(!forestLoaded){e.textContent='森林簿を読み込むと使えます（森林簿のある地番を保存します）。';document.getElementById('svf-go').disabled=true;return}
-  if(svBusy)return;
-  e.textContent='保存する枚数を数えています…';
-  try{const ph=document.getElementById('sv-photo').checked;svfList=await forestTiles(ph);
+  const e=document.getElementById('svf-est'),go=document.getElementById('svf-go'),t=svfTarget();if(svBusy||!t.ok)return;
+  e.textContent='保存する枚数を数えています…';go.disabled=true;
+  try{const ph=document.getElementById('sv-photo').checked;svfList=await forestTiles(ph,t.ds);
     let have=0;try{const c=await caches.open(SAVED_CACHE);for(const u of svfList)if(await c.match(u))have++}catch(_){}
     const rest=svfList.length-have,mb=rest*(ph?0.035:0.02);
     e.textContent=`${svfList.length.toLocaleString()}枚（うち保存済み ${have.toLocaleString()}枚）。残り約${mb<1?mb.toFixed(1):Math.round(mb)}MB。Wi-Fiのときに保存してください。途中で中止しても、次に押すと続きから保存します。`;
-    document.getElementById('svf-go').disabled=!rest}
-  catch(_){e.textContent='地番データを読み込めませんでした。通信状態を確認してください。'}
+    go.textContent=rest?`この${rest.toLocaleString()}枚を保存する`:'保存済みです';go.disabled=!rest}
+  catch(_){svfList=null;go.disabled=false;e.textContent='地番データを読み込めませんでした。通信状態を確認してください。'}
 }
-document.getElementById('sv-photo').addEventListener('change',svfEstimate);
+document.getElementById('sv-photo').addEventListener('change',svfReset);
 document.getElementById('svf-go').onclick=async()=>{
-  if(!svfList)await svfEstimate();if(!svfList)return;
+  if(!svfList){await svfEstimate();return}
   const res=await saveTiles(svfList,'svf-prog');if(!res)return;
   svProg('svf-prog',res.stopped?`中止しました（${res.done.toLocaleString()}/${res.total.toLocaleString()}）。もう一度押すと続きから保存します`:
     res.ng&&!res.ok?'地図を保存できませんでした。通信状態を確認してください':`町の森林の地図を保存しました：新しく ${res.ok.toLocaleString()}枚${res.ng?`（失敗 ${res.ng}枚。もう一度押すと再挑戦します）`:''}。圏外の山林でも地図を表示できます`);
-  svEstimate();svfEstimate();
+  svEstimate();svfReset();
 };
-document.getElementById('sv-clear').onclick=async()=>{try{await caches.delete(SAVED_CACHE)}catch(_){}['sv-prog','svf-prog'].forEach(id=>svProg(id,''));svProg('sv-prog','保存した地図を消しました');svEstimate();svfEstimate()};
+document.getElementById('sv-clear').onclick=async()=>{try{await caches.delete(SAVED_CACHE)}catch(_){}['sv-prog','svf-prog'].forEach(id=>svProg(id,''));svProg('sv-prog','保存した地図を消しました');svEstimate();svfReset()};
 function dlStatus(){
   document.getElementById('dl-csv-st').textContent=forestLoaded?`読み込み済み：${countRows(forest).toLocaleString()}件（${document.getElementById('fload').title.replace(/^読込済み：/,'')}）`:'まだ読み込んでいません';
   document.getElementById('dl-kp-st').textContent=kpSheets.length?`読み込み済み：${kpSheets.length}枚`:'まだ読み込んでいません';
   if(CFG.csvUrl)document.getElementById('dl-link').href=CFG.csvUrl}
 document.getElementById('dl-csv').addEventListener('change',async e=>{await onForestFiles(e);dlStatus();rpMsg(toastEl.hidden?'':toastEl.textContent);toastEl.hidden=true}); // 結果は「⇅」の画面の中に出す
-function openRec(){rpMsg('');dlStatus();trkSave(true);if(!svBusy)['sv-prog','svf-prog'].forEach(id=>svProg(id,''));svEstimate();svfEstimate();document.getElementById('rp-sum').textContent='この端末の記録：'+recSummary(recItems());document.getElementById('recp').hidden=false}
+function openRec(){rpMsg('');dlStatus();trkSave(true);if(!svBusy)['sv-prog','svf-prog'].forEach(id=>svProg(id,''));svEstimate();svfReset();document.getElementById('rp-sum').textContent='この端末の記録：'+recSummary(recItems());document.getElementById('recp').hidden=false}
 document.getElementById('rec-open').onclick=openRec;
 document.getElementById('rec-close').onclick=()=>document.getElementById('recp').hidden=true;
 document.getElementById('recp').addEventListener('click',e=>{if(e.target.id==='recp')e.target.hidden=true});
