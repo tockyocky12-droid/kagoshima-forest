@@ -215,8 +215,10 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .kkbtn{margin-left:auto}
 .kkbtn+.lbtn{margin-left:0}
 .kkbtn[aria-pressed="true"]{border-color:#0e7490!important;color:#0e7490!important}
-.kpbtn{margin-left:0;border-top-right-radius:0;border-bottom-right-radius:0}
-.kpadd{margin-left:-9px;border-top-left-radius:0;border-bottom-left-radius:0;padding:6px 9px}
+.kpbtn{margin-left:0}
+.dl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.dl-row .dl-st{font-size:12.5px;color:var(--muted);flex-basis:100%}
+.dl-row a{font-size:13px;color:var(--accent)}
 .kpbtn[aria-pressed="true"]{border-color:#1d4ed8!important;color:#1d4ed8!important}
 .kp-row{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:6px 0}
 .kp-name{flex:1;min-width:0;text-align:left;font:inherit;font-size:13.5px;background:transparent;border:0;color:var(--accent);padding:4px 0;cursor:pointer}
@@ -337,13 +339,20 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <button id="bm-std" aria-pressed="true">地図</button>
     <button id="bm-photo" aria-pressed="false">写真</button>
   </div>
-  <button id="rec-open" class="hbtn" type="button" aria-label="記録の受け渡し">⇅</button>
+  <button id="rec-open" class="hbtn" type="button" aria-label="データと記録（森林簿・計画図の追加、記録の受け渡し、地図の保存）">⇅</button>
 </header>
 <div id="recp" hidden>
   <div class="rp-card" role="dialog" aria-labelledby="rp-ttl">
-    <div class="rp-top"><h2 id="rp-ttl">記録の受け渡し</h2><button id="rec-close" class="close" type="button" aria-label="閉じる">×</button></div>
+    <div class="rp-top"><h2 id="rp-ttl">データと記録</h2><button id="rec-close" class="close" type="button" aria-label="閉じる">×</button></div>
     <p class="rp-sum" id="rp-sum"></p>
     <p class="rp-msg" id="rp-msg" role="status" hidden></p>
+    <div class="rp-step">
+      <h3>森林簿・計画図を追加</h3>
+      <p>県のページからダウンロードしたファイルを選びます。前に読み込んだ分は残り、同じ大字・同じ図は新しいもので置き換えます。データはこの端末の中だけで使います。</p>
+      <div class="dl-row"><span class="fwrap pwrap"><span class="pbtn">森林簿CSVを追加</span><input id="dl-csv" class="fover" type="file" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain" multiple aria-label="森林簿CSVを選ぶ"></span>
+        <a id="dl-link" href="https://www.pref.kagoshima.jp/ad12/shinrin-open.html" target="_blank" rel="noopener">県のダウンロードページ</a><span class="dl-st" id="dl-csv-st"></span></div>
+      <div class="dl-row" id="dl-kp"><button id="kp-manage" class="pbtn" type="button">森林計画図（zip・PDF）を追加・管理</button><span class="dl-st" id="dl-kp-st"></span></div>
+    </div>
     <div class="rp-step">
       <h3>この端末の記録を送る</h3>
       <p>メモ表示・メモ内部記録・地積・伐採届・施業履歴・踏査ルート（写真も含む）をファイルに書き出します。メールやLINEなどで、もう一方の端末に送ってください。</p>
@@ -353,11 +362,6 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <h3>送られてきた記録を取り込む</h3>
       <p>受け取った記録ファイル（.txt または .json）を選びます。同じ地番の記録は、ファイルの内容で上書きします。踏査ルートは、無いものだけ追加します（同じルートは新しい方に合わせます）。この端末にしかない記録は消えません。</p>
       <div class="rp-btns"><span class="fwrap pwrap"><span class="pbtn">ファイルを選んで取り込む</span><input id="rec-file" class="fover" type="file" accept=".json,.txt,application/json,text/plain" aria-label="記録ファイルを選ぶ"></span></div>
-    </div>
-    <div class="rp-step">
-      <h3>森林計画図（県のPDF）</h3>
-      <p>県の森林計画図を、この端末の中で地図に重ねます。読み込みや削除はこちらから。</p>
-      <div class="rp-btns"><button id="kp-manage" class="pbtn" type="button">森林計画図の読み込み・管理</button></div>
     </div>
     <div class="rp-step">
       <h3>地図を端末に保存（通信量を減らす）</h3>
@@ -375,7 +379,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01h</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01i</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -393,7 +397,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <button id="t-own" aria-pressed="false">所有</button>
   </div>
   <button id="kk" class="lbtn kkbtn" type="button" aria-pressed="false">国有林</button>
-  <button id="kp" class="lbtn kpbtn" type="button" aria-pressed="false">計画図</button><button id="kp-add" class="lbtn kpadd" type="button" aria-label="森林計画図の読み込み・管理" title="森林計画図の読み込み・管理">＋</button>
+  <button id="kp" class="lbtn kpbtn" type="button" aria-pressed="false">計画図</button>
   <button id="lbl" class="lbtn" type="button" aria-pressed="true">メモ表示</button>
   <span class="fwrap"><span id="fload" class="fbtn">森林簿CSVを読み込む</span><input id="ffile" class="fover" type="file" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain" multiple aria-label="森林簿CSVを選ぶ"></span>
   <span id="fmiss" class="fmiss" hidden></span>
@@ -426,7 +430,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </ol>
     <a id="cg-go" class="pbtn cg-go" target="_blank" rel="noopener">県の森林簿ダウンロードのページを開く</a>
     <p class="cg-note disc" hidden></p>
-    <p class="cg-note">読み込んだ森林簿はこの端末の中だけに保存され、外には送られません。利用の条件（複製・転売の禁止など）は県のページで確認してください。この案内は最初の一度だけ出ます。あとからは、地番のカードの「森林簿」タブからも県のページを開けます。</p>
+    <p class="cg-note">読み込んだ森林簿はこの端末の中だけに保存され、外には送られません。利用の条件（複製・転売の禁止など）は県のページで確認してください。この案内は最初の一度だけ出ます。あとから森林簿を足すときは、右上の「⇅」→「森林簿CSVを追加」からできます。</p>
     <div class="rp-btns" style="margin-top:10px"><button id="cg-later" class="pbtn ghost2" type="button">あとで</button></div>
   </div>
 </div>
@@ -1743,10 +1747,9 @@ document.getElementById('kp-close').onclick=()=>document.getElementById('kpp').h
 document.getElementById('kpp').addEventListener('click',e=>{if(e.target.id==='kpp')e.target.hidden=true});
 document.getElementById('kp-clear').onclick=async e=>{const b=e.currentTarget;if(!b.dataset.ok){b.dataset.ok=1;b.textContent='本当にすべて消す';return}
   delete b.dataset.ok;b.textContent='すべて消す';for(const s of kpSheets)await kpRemove(s);kpSheets=[];await kpSave();kpList();kpApply()};
-document.getElementById('kp-add').onclick=kpOpen; // 「＋」はいつでも読み込み・管理の画面を開く
 document.getElementById('kp-manage').onclick=()=>{document.getElementById('recp').hidden=true;kpOpen()};
 // config.js で noKeikakuzu:true の版（かごしま森林ナビ）は、計画図の機能を出さない
-if(CFG.noKeikakuzu){document.getElementById('kp').hidden=true;document.getElementById('kp-add').hidden=true;document.getElementById('kp-manage').closest('.rp-step').hidden=true}
+if(CFG.noKeikakuzu){document.getElementById('kp').hidden=true;document.getElementById('dl-kp').hidden=true}
 else idb.get('kp:meta').then(m=>{kpSheets=Array.isArray(m)?m:[];kpApply()}).catch(()=>{});
 
 // ---- 記録の受け渡し（メモ・地積・伐採届・踏査ルートをファイルで別の端末へ） ----
@@ -1836,7 +1839,12 @@ document.getElementById('svf-go').onclick=async()=>{
   svEstimate();svfEstimate();
 };
 document.getElementById('sv-clear').onclick=async()=>{try{await caches.delete(SAVED_CACHE)}catch(_){}['sv-prog','svf-prog'].forEach(id=>svProg(id,''));svProg('sv-prog','保存した地図を消しました');svEstimate();svfEstimate()};
-function openRec(){rpMsg('');trkSave(true);if(!svBusy)['sv-prog','svf-prog'].forEach(id=>svProg(id,''));svEstimate();svfEstimate();document.getElementById('rp-sum').textContent='この端末の記録：'+recSummary(recItems());document.getElementById('recp').hidden=false}
+function dlStatus(){
+  document.getElementById('dl-csv-st').textContent=forestLoaded?`読み込み済み：${countRows(forest).toLocaleString()}件（${document.getElementById('fload').title.replace(/^読込済み：/,'')}）`:'まだ読み込んでいません';
+  document.getElementById('dl-kp-st').textContent=kpSheets.length?`読み込み済み：${kpSheets.length}枚`:'まだ読み込んでいません';
+  if(CFG.csvUrl)document.getElementById('dl-link').href=CFG.csvUrl}
+document.getElementById('dl-csv').addEventListener('change',async e=>{await onForestFiles(e);dlStatus();rpMsg(toastEl.hidden?'':toastEl.textContent);toastEl.hidden=true}); // 結果は「⇅」の画面の中に出す
+function openRec(){rpMsg('');dlStatus();trkSave(true);if(!svBusy)['sv-prog','svf-prog'].forEach(id=>svProg(id,''));svEstimate();svfEstimate();document.getElementById('rp-sum').textContent='この端末の記録：'+recSummary(recItems());document.getElementById('recp').hidden=false}
 document.getElementById('rec-open').onclick=openRec;
 document.getElementById('rec-close').onclick=()=>document.getElementById('recp').hidden=true;
 document.getElementById('recp').addEventListener('click',e=>{if(e.target.id==='recp')e.target.hidden=true});
