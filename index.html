@@ -347,8 +347,8 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <p class="rp-sum" id="rp-sum"></p>
     <p class="rp-msg" id="rp-msg" role="status" hidden></p>
     <div class="rp-step">
-      <h3>森林簿・計画図を追加</h3>
-      <p>県のページからダウンロードしたファイルを選びます。前に読み込んだ分は残り、同じ大字・同じ図は新しいもので置き換えます。データはこの端末の中だけで使います。</p>
+      <h3 id="dl-h">森林簿・計画図を追加</h3>
+      <p id="dl-p">県のページからダウンロードしたファイルを選びます。前に読み込んだ分は残り、同じ大字・同じ図は新しいもので置き換えます。データはこの端末の中だけで使います。</p>
       <div class="dl-row"><span class="fwrap pwrap"><span class="pbtn">森林簿CSVを追加</span><input id="dl-csv" class="fover" type="file" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain" multiple aria-label="森林簿CSVを選ぶ"></span>
         <a id="dl-link" href="https://www.pref.kagoshima.jp/ad12/shinrin-open.html" target="_blank" rel="noopener">県のダウンロードページ</a><span class="dl-st" id="dl-csv-st"></span></div>
       <div class="dl-row" id="dl-kp"><button id="kp-manage" class="pbtn" type="button">森林計画図（zip・PDF）を追加・管理</button><span class="dl-st" id="dl-kp-st"></span></div>
@@ -379,7 +379,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01j</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01k</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1750,7 +1750,9 @@ document.getElementById('kp-clear').onclick=async e=>{const b=e.currentTarget;if
   delete b.dataset.ok;b.textContent='すべて消す';for(const s of kpSheets)await kpRemove(s);kpSheets=[];await kpSave();kpList();kpApply()};
 document.getElementById('kp-manage').onclick=()=>{document.getElementById('recp').hidden=true;kpOpen()};
 // config.js で noKeikakuzu:true の版（かごしま森林ナビ）は、計画図の機能を出さない
-if(CFG.noKeikakuzu){document.getElementById('kp').hidden=true;document.getElementById('dl-kp').hidden=true}
+if(CFG.noKeikakuzu){document.getElementById('kp').hidden=true;document.getElementById('dl-kp').hidden=true;
+  document.getElementById('dl-h').textContent='森林簿を追加';
+  document.getElementById('dl-p').textContent='県のページからダウンロードした森林簿のCSVを選びます。前に読み込んだ分は残り、同じ大字は新しいもので置き換えます。データはこの端末の中だけで使います。'}
 else idb.get('kp:meta').then(m=>{kpSheets=Array.isArray(m)?m:[];kpApply()}).catch(()=>{});
 
 // ---- 記録の受け渡し（メモ・地積・伐採届・踏査ルートをファイルで別の端末へ） ----
