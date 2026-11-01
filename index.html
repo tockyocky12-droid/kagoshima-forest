@@ -374,7 +374,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01f</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01g</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1635,8 +1635,8 @@ function kpGeoref(items,vp){
     pts.length=0;N.forEach(l=>pts.push([l.x,l.y-5.3,0,l.v]));const g=solve(3),k=KP/KM;
     const ax=-g[1]/k,ay=g[0]/k;const c=E.reduce((a,l)=>a+(l.v-(ax*(l.x+l.w/2)+ay*l.y)),0)/E.length;A=[ax,ay,c].concat(g)}
   else return null;
-  // 地図の枠：経緯度の文字のすぐ内側（図の枠線の位置で確かめた値）
-  const fr=[Math.max(...lef.map(l=>l.x+l.w))+6.6,Math.max(...top.map(l=>l.y))+7.8,Math.min(...rig.map(l=>l.x))-7.4,Math.min(...bot.map(l=>l.y))-17.2];
+    // 枠線（幅約1.3pt）の真ん中で切る。隣の図とすき間なく接し、継ぎ目は細い線1本になる（高解像度で枠線の位置を測った値）
+  const fr=[Math.max(...lef.map(l=>l.x+l.w))+5.9,Math.max(...top.map(l=>l.y))+7.6,Math.min(...rig.map(l=>l.x))-6.0,Math.min(...bot.map(l=>l.y))-16.4];
   if(!(fr[2]>fr[0]+100&&fr[3]>fr[1]+100))return null;
   return {A,fr,title,pts:pts.length};
 }
