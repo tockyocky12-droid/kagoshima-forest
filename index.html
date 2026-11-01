@@ -219,6 +219,7 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .dl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
 .dl-row .dl-st{font-size:12.5px;color:var(--muted);flex-basis:100%}
 .dl-row a{font-size:13px;color:var(--accent)}
+.dl-row .dl-st.warn{color:#d97706}
 .kpbtn[aria-pressed="true"]{border-color:#1d4ed8!important;color:#1d4ed8!important}
 .kp-row{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:6px 0}
 .kp-name{flex:1;min-width:0;text-align:left;font:inherit;font-size:13.5px;background:transparent;border:0;color:var(--accent);padding:4px 0;cursor:pointer}
@@ -351,6 +352,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <p id="dl-p">県のページからダウンロードしたファイルを選びます。前に読み込んだ分は残り、同じ大字・同じ図は新しいもので置き換えます。データはこの端末の中だけで使います。</p>
       <div class="dl-row"><span class="fwrap pwrap"><span class="pbtn">森林簿CSVを追加</span><input id="dl-csv" class="fover" type="file" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain" multiple aria-label="森林簿CSVを選ぶ"></span>
         <a id="dl-link" href="https://www.pref.kagoshima.jp/ad12/shinrin-open.html" target="_blank" rel="noopener">県のダウンロードページ</a><span class="dl-st" id="dl-csv-st"></span></div>
+      <div class="dl-row"><span class="dl-st" id="dl-store"></span></div>
       <div class="dl-row" id="dl-kp"><button id="kp-manage" class="pbtn" type="button">森林計画図（zip・PDF）を追加・管理</button><span class="dl-st" id="dl-kp-st"></span></div>
     </div>
     <div class="rp-step">
@@ -379,7 +381,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01k</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01l</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -792,11 +794,20 @@ async function onForestFiles(e){
     const towns=[...new Set(Object.keys(add.data).map(townOf))].filter(Boolean).join('・')+(add.other&&add.other.length?`（${add.other.join('・')}は地図に入っていないので除きました）`:'');
     const obj={data,rows:countRows(data),at:new Date().toISOString()};
     setForest(obj);
-    try{await idb.set('forest',obj);toast(`${towns}の森林簿 ${add.rows.toLocaleString()} 件を読み込みました（この端末に保存）`)}
+    try{await idb.set('forest',obj);keepData();try{LS.setItem('ui:forestRows',String(obj.rows))}catch(_){}toast(`${towns}の森林簿 ${add.rows.toLocaleString()} 件を読み込みました（この端末に保存）`)}
     catch(_){toast(`${towns}の森林簿 ${add.rows.toLocaleString()} 件を読み込みました。端末に保存できなかったので、次回また読み込んでください`)}
   }catch(err){toast(err.message||'森林簿を読み込めませんでした')}
 }
-idb.get('forest').then(o=>{if(o)setForest(o);else csvGuide()}).catch(()=>csvGuide());
+// 端末に保存したデータを、ブラウザが空き容量不足のときに消さないように頼む（Androidでは確認なしで決まる）
+let keepOK=null;
+async function keepData(){try{if(navigator.storage&&navigator.storage.persist){keepOK=await navigator.storage.persisted()||await navigator.storage.persist()}}catch(_){}}
+idb.get('forest').then(o=>{
+  if(o){setForest(o);keepData();return}
+  // 前に読み込んだはずの森林簿が無いときは知らせる（端末の空き容量不足でブラウザが消した、など）
+  let was=0;try{was=+(LS.getItem('ui:forestRows')||0)}catch(_){}
+  if(was>0){toastLong(`前に読み込んだ森林簿（${was.toLocaleString()}件）が、この端末から消えていました。端末の空き容量が少ないと、ブラウザが消すことがあります。お手数ですが「⇅」→「森林簿CSVを追加」から読み込み直してください。`);try{LS.removeItem('ui:forestRows')}catch(_){}}
+  else csvGuide()}).catch(()=>csvGuide());
+function toastLong(t){toastEl.textContent=t;toastEl.hidden=false;clearTimeout(tt);tt=setTimeout(()=>toastEl.hidden=true,12000)}
 // 森林簿のダウンロード案内：森林簿がまだ無い端末で、最初の一度だけ出す（config.js に csvUrl がある版だけ）
 function csvGuide(){
   if(!CFG.csvUrl)return;try{if(LS.getItem('ui:csvguide'))return;LS.setItem('ui:csvguide','1')}catch(e){return}
@@ -1698,7 +1709,7 @@ async function kpFiles(files){
   }
   wake(false);document.getElementById('kp-file').disabled=false;
   msg(`${ok}枚の森林計画図を読み込みました（この端末に保存）。${errs.length?'読み込めなかったもの：'+errs.join('／'):''}`);
-  kpList();if(ok&&!kpOn)kpSet(true);
+  kpList();if(ok){keepData();if(!kpOn)kpSet(true)}
 }
 // 地図に重ねる：画面の地図の1枚ごとに、重なる図の画像を、位置を合わせて描く
 const kpBmp=new Map();
@@ -1846,7 +1857,12 @@ document.getElementById('svf-go').onclick=async()=>{
   svEstimate();svfReset();
 };
 document.getElementById('sv-clear').onclick=async()=>{try{await caches.delete(SAVED_CACHE)}catch(_){}['sv-prog','svf-prog'].forEach(id=>svProg(id,''));svProg('sv-prog','保存した地図を消しました');svEstimate();svfReset()};
-function dlStatus(){
+async function storageStatus(){const e=document.getElementById('dl-store');if(!e)return;e.textContent='';
+  try{const est=navigator.storage&&navigator.storage.estimate?await navigator.storage.estimate():null;await keepData();
+    const mb=est?Math.round(est.usage/1048576):null;
+    e.textContent=`この端末への保存：${mb!=null?`約${mb.toLocaleString()}MB（地図の保存分も含む）`:'—'}・${keepOK?'消されにくい設定：有効':'消されにくい設定：無効（端末の空き容量が少ないと、ブラウザが森林簿などを消すことがあります）'}`;
+    e.className='dl-st'+(keepOK?'':' warn')}catch(_){}}
+function dlStatus(){storageStatus();
   document.getElementById('dl-csv-st').textContent=forestLoaded?`読み込み済み：${countRows(forest).toLocaleString()}件（${document.getElementById('fload').title.replace(/^読込済み：/,'')}）`:'まだ読み込んでいません';
   document.getElementById('dl-kp-st').textContent=kpSheets.length?`読み込み済み：${kpSheets.length}枚`:'まだ読み込んでいません';
   if(CFG.csvUrl)document.getElementById('dl-link').href=CFG.csvUrl}
