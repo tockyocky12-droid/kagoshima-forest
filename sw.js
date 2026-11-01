@@ -1,5 +1,5 @@
 // 錦江町 森林管理システム：オフラインでも開けるようにするための仕組み
-const VER='v62';
+const VER='v63';
 // この仕組みが置かれたフォルダ（例：/my-first-repo/app/）。町ごとのフォルダで同じファイルを使う
 const BASE=new URL(self.registration.scope).pathname;
 const PFX=BASE.endsWith('/app/')?'forest':BASE.split('/').filter(Boolean).pop(); // 錦江町は今までどおり「forest」
@@ -62,5 +62,7 @@ self.addEventListener('fetch',e=>{
   // 地図の画像は保存分を先に使う（画面から直接読むもの＝保存処理や標高の計算は、そのまま通す）
   if(u.hostname==='cyberjapandata.gsi.go.jp'){if(req.destination==='image')e.respondWith(cacheFirst(req,TILES,TILE_MAX));return}
   if(u.hostname==='cdnjs.cloudflare.com'||u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'){e.respondWith(cacheFirst(req,STATIC));return}
+  // 設定ファイル（config.js）と目録類は、ブラウザの一時保存を使わず毎回最新を確認する（本体と設定の食い違いを防ぐ）
+  if(u.origin===location.origin&&(u.pathname===BASE+'config.js'||u.pathname===BASE+'manifest.webmanifest')){e.respondWith(networkFirst(req,SHELL,true));return}
   if(u.origin===location.origin){e.respondWith(networkFirst(req,SHELL))}
 });
