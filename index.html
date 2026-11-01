@@ -381,7 +381,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01l</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01m</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1018,6 +1018,7 @@ function openSheet(layer){
   const rows=[['図上面積',`${Math.round(a).toLocaleString()} m²`],
     ['精度区分',pick(p,['精度区分'])||'—'],
     ['座標の求め方',pick(p,['座標値種別'])||'—']];
+  if(p['位置補正'])rows.push(['位置の補正',p['位置補正']]); // 元データの位置の誤りを、このアプリで直した筆
   const dl=document.getElementById('s-info');dl.replaceChildren();
   rows.forEach(([k,v])=>{const dt=document.createElement('dt');dt.textContent=k;const dd=document.createElement('dd');dd.textContent=v;dl.append(dt,dd)});
   renderForest(p);
