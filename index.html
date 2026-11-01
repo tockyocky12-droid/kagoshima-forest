@@ -374,7 +374,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01e</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01f</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1743,7 +1743,9 @@ document.getElementById('kpp').addEventListener('click',e=>{if(e.target.id==='kp
 document.getElementById('kp-clear').onclick=async e=>{const b=e.currentTarget;if(!b.dataset.ok){b.dataset.ok=1;b.textContent='本当にすべて消す';return}
   delete b.dataset.ok;b.textContent='すべて消す';for(const s of kpSheets)await kpRemove(s);kpSheets=[];await kpSave();kpList();kpApply()};
 document.getElementById('kp-manage').onclick=()=>{document.getElementById('recp').hidden=true;kpOpen()};
-idb.get('kp:meta').then(m=>{kpSheets=Array.isArray(m)?m:[];kpApply()}).catch(()=>{});
+// config.js で noKeikakuzu:true の版（かごしま森林ナビ）は、計画図の機能を出さない
+if(CFG.noKeikakuzu){document.getElementById('kp').hidden=true;document.getElementById('kp-manage').closest('.rp-step').hidden=true}
+else idb.get('kp:meta').then(m=>{kpSheets=Array.isArray(m)?m:[];kpApply()}).catch(()=>{});
 
 // ---- 記録の受け渡し（メモ・地積・伐採届・踏査ルートをファイルで別の端末へ） ----
 const REC_NS=['memo','mlabel','chiseki','bassai','rireki'];

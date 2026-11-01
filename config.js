@@ -3,6 +3,7 @@
 window.CFG={
   id:'kagoshima',
   title:'かごしま森林ナビ',
+  noKeikakuzu:true,             // 森林計画図を重ねる機能は使わない（町ごとの版だけ）
   disclaimer:'個人が作成した非公式のアプリです。県・市町村の公式のものではありません。地番・森林簿の内容は参考で、境界や権利を確定するものではありません。',
   ns:'kagoshima/',             // 町ごとの版と記録が混ざらないよう、保存する名前の頭に付ける
   idb:'kagoshima-forest',
