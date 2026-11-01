@@ -38,7 +38,7 @@ def drop_broken(fs):
         else: bad.append(f)
     return ok, bad
 
-KEEP = ['ID', '大字名', '丁目名', '小字名', '地番', '精度区分', '座標値種別']
+KEEP = ['ID', '大字名', '丁目名', '小字名', '地番', '精度区分', '座標値種別', '位置補正']
 
 def rnd(c):
     if isinstance(c[0], (int, float)): return [round(c[0], 6), round(c[1], 6)]
