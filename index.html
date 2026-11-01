@@ -387,7 +387,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01o</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01p</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -815,6 +815,7 @@ let keepOK=null;
 async function keepData(){try{if(navigator.storage&&navigator.storage.persist){keepOK=await navigator.storage.persisted()||await navigator.storage.persist()}}catch(_){}}
 idb.get('forest').then(o=>{
   if(o){setForest(o);keepData();return}
+  try{if(LS.length)keepData()}catch(_){}
   // 前に読み込んだはずの森林簿が無いときは知らせる（端末の空き容量不足でブラウザが消した、など）
   let was=0;try{was=+(LS.getItem('ui:forestRows')||0)}catch(_){}
   if(was>0){toastLong(`前に読み込んだ森林簿（${was.toLocaleString()}件）が、この端末から消えていました。端末の空き容量が少ないと、ブラウザが消すことがあります。お手数ですが「⇅」→「森林簿CSVを追加」から読み込み直してください。`);try{LS.removeItem('ui:forestRows')}catch(_){}}
@@ -1697,7 +1698,7 @@ async function kpOne(name,data,onStep){
       bb:[Math.min(...cs.map(c=>c[1])),Math.min(...cs.map(c=>c[0])),Math.max(...cs.map(c=>c[1])),Math.max(...cs.map(c=>c[0]))]};
   }finally{pdf.destroy()}
 }
-async function kpSave(){await idb.set('kp:meta',kpSheets)}
+async function kpSave(){await idb.set('kp:meta',kpSheets);try{kpSheets.length?LS.setItem('ui:kpCount',String(kpSheets.length)):LS.removeItem('ui:kpCount')}catch(_){}}
 async function kpRemove(s){for(const p of s.pieces)await idb.del(`kp:img:${s.id}:${p.i}`).catch(()=>{});kpBmp.forEach((v,k)=>{if(k.startsWith(s.id+':'))kpBmp.delete(k)})}
 // 読み込み（PDFでも、県からダウンロードしたzipのままでも）
 async function kpFiles(files){
@@ -1777,7 +1778,12 @@ document.getElementById('kp-manage').onclick=()=>{document.getElementById('recp'
 if(CFG.noKeikakuzu){document.getElementById('kp').hidden=true;document.getElementById('dl-kp').hidden=true;
   document.getElementById('dl-h').textContent='森林簿を追加';
   document.getElementById('dl-p').textContent='県のページからダウンロードした森林簿のCSVを選びます。前に読み込んだ分は残り、同じ大字は新しいもので置き換えます。データはこの端末の中だけで使います。'}
-else idb.get('kp:meta').then(m=>{kpSheets=Array.isArray(m)?m:[];kpApply()}).catch(()=>{});
+else idb.get('kp:meta').then(m=>{kpSheets=Array.isArray(m)?m:[];kpApply();
+  if(kpSheets.length){keepData();try{LS.setItem('ui:kpCount',String(kpSheets.length))}catch(_){}return}
+  // 前に読み込んだはずの計画図が無いときは知らせる（端末の空き容量不足でブラウザが消した、など）
+  let was=0;try{was=+(LS.getItem('ui:kpCount')||0)}catch(_){}
+  if(was>0){setTimeout(()=>toastLong(`前に読み込んだ森林計画図（${was}枚）が、この端末から消えていました。端末の空き容量が少ないと、ブラウザが消すことがあります。お手数ですが「⇅」→「森林計画図を追加・管理」から読み込み直してください。`),1500);try{LS.removeItem('ui:kpCount')}catch(_){}}
+}).catch(()=>{});
 
 // ---- 記録の受け渡し（メモ・地積・伐採届・踏査ルートをファイルで別の端末へ） ----
 const REC_NS=['memo','mlabel','chiseki','bassai','rireki'];
