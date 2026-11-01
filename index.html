@@ -143,6 +143,11 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .pbtn.ghost2{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .rp-note{font-size:12px;color:var(--muted);margin:14px 0 0}
 .rp-msg{font-size:13px;line-height:1.6;background:var(--bg);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;margin:8px 0 0}
+.dnotes summary{font-size:15px;font-weight:700;cursor:pointer;padding:2px 0}
+.dnotes .dn{font-size:13px;line-height:1.65;margin:10px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.dnotes .dn b{display:block;font-size:13.5px;margin-bottom:2px}
+.dnotes .dn small{display:block;color:var(--muted);font-size:11.5px;margin-top:4px}
+.dnotes .dg{font-size:12.5px;color:var(--muted);line-height:1.6;margin:10px 0 0}
 .rp-ver{display:block;margin-top:6px;font-size:11px;opacity:.7}
 
 .fwrap{position:relative;display:inline-block;overflow:hidden;border-radius:8px}
@@ -380,8 +385,9 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
         <div class="sv-prog" id="svf-prog" role="status" hidden><div class="bar"><i></i></div><span></span></div>
       </div>
     </div>
+    <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01m</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01n</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -561,6 +567,12 @@ const CFG=Object.assign({id:'kinko',title:'錦江町森林管理システム',ns
   center:[31.215,130.79],oazaAlias:{'麓':'田代麓','川原':'田代川原'},town:{'田代麓':'田代町','田代川原':'田代町','神川':'大根占町','馬場':'大根占町','城元':'大根占町'},
   townList:['田代町','大根占町'],csvHint:'錦江町分の森林簿CSV（田代町・大根占町の2ファイル）',kkOffice:'大隅森林管理署'},window.CFG||{});
 document.title=CFG.title;document.querySelector('header h1').textContent=CFG.h1||CFG.title;
+// 地番データについてのお知らせ（元データの誤りと、このアプリでの扱い。config.js の dataNotes がある版だけ）
+if(Array.isArray(CFG.dataNotes)&&CFG.dataNotes.length){const box=document.getElementById('dnotes-body');
+  CFG.dataNotes.forEach(n=>{const d=document.createElement('div');d.className='dn';const b=document.createElement('b');b.textContent=n.t;d.append(b,n.d);
+    if(n.at){const sm=document.createElement('small');sm.textContent=n.at;d.append(sm)}box.append(d)});
+  const gn=document.createElement('p');gn.className='dg';gn.textContent='地番データは、法務省の登記所備付地図データをG空間情報センター（AIGID）が機械的に変換して公開しているものです。元の地図の誤りがそのまま残っていることがあります。市町村の境目で隣の町の地番と少し重なる所や、山林部で地番図が公開されていない所（森林簿と結び付かない）は、誤りではなく元データの性質です。地図で気になる所があれば、作成者までお知らせください。';
+  box.append(gn);document.getElementById('dnotes').hidden=false}
 // 非公式であることの断り書き（config.js に disclaimer がある版だけ。初回の案内と「⇅」の画面に出す）
 if(CFG.disclaimer)document.querySelectorAll('.disc').forEach(e=>{e.textContent=CFG.disclaimer;e.hidden=false});
 // 端末への保存は町ごとに分ける（錦江町は今までどおりの名前、ほかの町は「町名/」を頭に付ける）
