@@ -119,7 +119,7 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 #tint .fwrap{margin-left:0}
 .fwrap[hidden],[hidden]{display:none!important}
 .hbtn{border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit;font-size:16px;border-radius:8px;width:36px;height:32px;cursor:pointer;flex:none}
-#recp,#trkp,#mkp,#csvg{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;
+#recp,#trkp,#mkp,#csvg,#kpp{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;
   padding:calc(env(safe-area-inset-top,0px) + 56px) max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));overflow:auto}
 .rp-card{background:var(--panel);color:var(--fg);border-radius:14px;padding:16px;max-width:460px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 .rp-top{display:flex;align-items:center;justify-content:space-between}
@@ -215,6 +215,12 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .kkbtn{margin-left:auto}
 .kkbtn+.lbtn{margin-left:0}
 .kkbtn[aria-pressed="true"]{border-color:#0e7490!important;color:#0e7490!important}
+.kpbtn{margin-left:0}
+.kpbtn[aria-pressed="true"]{border-color:#1d4ed8!important;color:#1d4ed8!important}
+.kp-row{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:6px 0}
+.kp-name{flex:1;min-width:0;text-align:left;font:inherit;font-size:13.5px;background:transparent;border:0;color:var(--accent);padding:4px 0;cursor:pointer}
+.kp-del{font:inherit;font-size:12px;border:1px solid #fca5a5;color:#dc2626;background:transparent;border-radius:999px;padding:3px 10px;cursor:pointer}
+#kp-prog{margin-top:10px}
 .kkpop{font-family:var(--f-data);font-size:13px;line-height:1.55;min-width:200px}
 .kkpop .kkh{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;margin-bottom:4px}
 .kkpop .kkb{font-size:11px;color:#fff;background:#0e7490;border-radius:999px;padding:1px 8px;font-weight:400}
@@ -348,6 +354,11 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <div class="rp-btns"><span class="fwrap pwrap"><span class="pbtn">ファイルを選んで取り込む</span><input id="rec-file" class="fover" type="file" accept=".json,.txt,application/json,text/plain" aria-label="記録ファイルを選ぶ"></span></div>
     </div>
     <div class="rp-step">
+      <h3>森林計画図（県のPDF）</h3>
+      <p>県の森林計画図を、この端末の中で地図に重ねます。読み込みや削除はこちらから。</p>
+      <div class="rp-btns"><button id="kp-manage" class="pbtn" type="button">森林計画図の読み込み・管理</button></div>
+    </div>
+    <div class="rp-step">
       <h3>地図を端末に保存（通信量を減らす）</h3>
       <p>Wi-Fiにつながっているときに、いま画面に映っている範囲の地図を、少し拡大した分まで端末に保存します。現場では保存した地図を使うので、通信をほとんど使いません。</p>
       <div class="opt2"><label><input type="checkbox" id="sv-photo"> 航空写真も保存する（通信量が約3倍）</label></div>
@@ -363,7 +374,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       </div>
     </div>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01d</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01e</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -381,6 +392,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <button id="t-own" aria-pressed="false">所有</button>
   </div>
   <button id="kk" class="lbtn kkbtn" type="button" aria-pressed="false">国有林</button>
+  <button id="kp" class="lbtn kpbtn" type="button" aria-pressed="false">計画図</button>
   <button id="lbl" class="lbtn" type="button" aria-pressed="true">メモ表示</button>
   <span class="fwrap"><span id="fload" class="fbtn">森林簿CSVを読み込む</span><input id="ffile" class="fover" type="file" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain" multiple aria-label="森林簿CSVを選ぶ"></span>
   <span id="fmiss" class="fmiss" hidden></span>
@@ -415,6 +427,24 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <p class="cg-note disc" hidden></p>
     <p class="cg-note">読み込んだ森林簿はこの端末の中だけに保存され、外には送られません。利用の条件（複製・転売の禁止など）は県のページで確認してください。この案内は最初の一度だけ出ます。あとからは、地番のカードの「森林簿」タブからも県のページを開けます。</p>
     <div class="rp-btns" style="margin-top:10px"><button id="cg-later" class="pbtn ghost2" type="button">あとで</button></div>
+  </div>
+</div>
+<div id="kpp" hidden>
+  <div class="rp-card" role="dialog" aria-labelledby="kp-ttl">
+    <div class="rp-top"><h2 id="kp-ttl">森林計画図を重ねる</h2><button id="kp-close" class="close" type="button" aria-label="閉じる">×</button></div>
+    <p class="trk-note" style="color:var(--fg)">県の森林計画図（PDF、縮尺5,000分の1）を、この端末の中で地図に重ねます。林小班の境界や番号を、地番・航空写真と見比べられます。図の白い所は透けます。</p>
+    <ol class="cg-steps">
+      <li>県のページから「森林計画図」へ進み、使う市町村のzip（またはPDF）をダウンロードします。</li>
+      <li>下のボタンで、ダウンロードしたzipかPDFを選びます（いくつでも）。1枚あたり数十秒かかります。</li>
+      <li>上の「計画図」ボタンで、重ねる・外すを切り替えます。</li>
+    </ol>
+    <div class="rp-btns" style="margin-top:10px"><span class="fwrap pwrap"><span class="pbtn">zip・PDFを選んで読み込む</span><input id="kp-file" class="fover" type="file" accept=".zip,.pdf,application/pdf,application/zip,application/x-zip-compressed" multiple aria-label="森林計画図のzipかPDFを選ぶ"></span>
+      <a class="pbtn ghost" href="https://www.pref.kagoshima.jp/ad12/shinrin-open.html" target="_blank" rel="noopener">県のページ</a></div>
+    <div class="sv-prog" id="kp-prog" role="status" hidden></div>
+    <p class="sv-est" id="kp-sum" style="margin-top:12px"></p>
+    <div id="kp-list"></div>
+    <div class="rp-btns" style="margin-top:8px"><button id="kp-clear" class="pbtn ghost2" type="button" hidden>すべて消す</button></div>
+    <p class="cg-note">位置は図の縁の経緯度から合わせています（ずれの目安は数m）。読み込んだ図はこの端末の中だけに保存し、外には送りません。森林計画図は境界や権利を確定するものではありません。この成果品は、鹿児島県森林資源情報データ（ダウンロード）から作成したものである。</p>
   </div>
 </div>
 <div id="mkp" hidden>
@@ -1551,6 +1581,169 @@ async function trkLoadAll(){
     toast('前回の踏査の記録が途中です。「再開」で続きを記録、「終了」で保存できます')}}catch(_){}
 }
 trkLoadAll();
+
+// ---- 森林計画図（県のPDF）を、この端末の中で地図に重ねる ----
+// PDFの図の縁にある経緯度の文字から位置を求め、図を画像にして端末（IndexedDB）に保存する。外には送らない。
+const KP_LIB={pdf:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',worker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  zip:'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'};
+const KP_S=1.6;            // 描く細かさ（1pt＝約1.76m → 約1.1m/画素。小班の番号が読める程度）
+const KP_PIECE=1024;       // 保存する画像1枚の大きさ
+let kpSheets=[],kpOn=false,kpLayer=null;try{kpOn=LS.getItem('ui:kp')==='on'}catch(e){}
+const loadScript=src=>new Promise((ok,ng)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>ng(new Error('部品を読み込めませんでした（通信状態を確認してください）'));document.head.append(s)});
+async function kpLibs(zip){
+  if(!window.pdfjsLib){await loadScript(KP_LIB.pdf);
+    // 別のサイトの部品はそのまま動かせないので、中身を取り出して使う
+    const w=await (await fetch(KP_LIB.worker)).text();pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([w],{type:'text/javascript'}))}
+  if(zip&&!window.JSZip)await loadScript(KP_LIB.zip);
+}
+const KP_RE=/^(\d+)°(\d+)'([\d.]+)"([EN])$/;
+// 図の縁の経緯度の文字から、図の上の位置（pt）→経緯度 の式を求める
+function kpGeoref(items,vp){
+  const lab=[];let title='';
+  for(const it of items){const t=it.str.replace(/\s/g,'');if(/森林計画図/.test(t)&&t.length>title.length)title=it.str.trim();
+    const m=t.match(KP_RE);if(!m)continue;const [x,y]=vp.convertToViewportPoint(it.transform[4],it.transform[5]);
+    lab.push({v:+m[1]+m[2]/60+m[3]/3600,ax:m[4],x,y,w:it.width})}
+  const E=lab.filter(l=>l.ax==='E'),N=lab.filter(l=>l.ax==='N');
+  if(E.length<2||N.length<2)return null;
+  const midY=E.reduce((a,l)=>a+l.y,0)/E.length,midX=N.reduce((a,l)=>a+l.x,0)/N.length;
+  const top=E.filter(l=>l.y<midY),bot=E.filter(l=>l.y>=midY),lef=N.filter(l=>l.x<midX),rig=N.filter(l=>l.x>=midX);
+  // 経線：上と下の文字の真ん中を結ぶ線。緯線：左右の文字の下端（基線）から5.3pt上を結ぶ線（図の「＋」の位置で確かめた値）
+  const lonLine=v=>{const a=top.find(l=>Math.abs(l.v-v)<1e-6),b=bot.find(l=>Math.abs(l.v-v)<1e-6);const p=a||b,q=b||a;
+    return {x1:p.x+p.w/2,y1:p.y,x2:q.x+q.w/2,y2:q.y===p.y?p.y+1:q.y}};
+  const latLine=v=>{const a=lef.find(l=>Math.abs(l.v-v)<1e-6),b=rig.find(l=>Math.abs(l.v-v)<1e-6);const p=a||b,q=b||a;
+    return {x1:p.x,y1:p.y-5.3,x2:q.x===p.x?p.x+1:q.x,y2:q.y-5.3}};
+  const pts=[];
+  for(const lv of [...new Set(E.map(l=>l.v))])for(const tv of [...new Set(N.map(l=>l.v))]){
+    const L1=lonLine(lv),L2=latLine(tv);let x=L1.x1,y=L2.y1;
+    for(let k=0;k<3;k++){y=L2.y1+(L2.y2-L2.y1)*(x-L2.x1)/(L2.x2-L2.x1);x=L1.x1+(L1.x2-L1.x1)*(y-L1.y1)/(L1.y2-L1.y1)}
+    pts.push([x,y,lv,tv])}
+  // 最小二乗で 経度＝a·x+b·y+c、緯度＝d·x+e·y+f
+  const solve=k=>{const M=[[0,0,0],[0,0,0],[0,0,0]],r=[0,0,0];
+    for(const p of pts){const v=[p[0],p[1],1];for(let i=0;i<3;i++){r[i]+=v[i]*p[k];for(let j=0;j<3;j++)M[i][j]+=v[i]*v[j]}}
+    for(let i=0;i<3;i++){let mx=i;for(let j=i+1;j<3;j++)if(Math.abs(M[j][i])>Math.abs(M[mx][i]))mx=j;[M[i],M[mx]]=[M[mx],M[i]];[r[i],r[mx]]=[r[mx],r[i]];
+      for(let j=i+1;j<3;j++){const f=M[j][i]/M[i][i];for(let c=i;c<3;c++)M[j][c]-=f*M[i][c];r[j]-=f*r[i]}}
+    const s=[0,0,0];for(let i=2;i>=0;i--){let v=r[i];for(let j=i+1;j<3;j++)v-=M[i][j]*s[j];s[i]=v/M[i][i]}return s};
+  // 経度・緯度の両方に2本以上の線があれば交点から。片方が1本だけの図は、もう片方の線の向きと縮尺から求める（地図はどの向きも同じ縮尺）
+  const lonVals=[...new Set(E.map(l=>l.v))],latVals=[...new Set(N.map(l=>l.v))];
+  const KM=110860,KP=111320*Math.cos(((latVals[0]||31.3))*Math.PI/180); // 緯度1度・経度1度の長さ（m）
+  let A;
+  if(lonVals.length>=2&&latVals.length>=2&&pts.length>=3)A=solve(2).concat(solve(3));
+  else if(lonVals.length>=2&&latVals.length>=1&&top.length&&bot.length){
+    pts.length=0;E.forEach(l=>pts.push([l.x+l.w/2,l.y,l.v,0]));const g=solve(2),k=KP/KM;
+    const dx=k*g[1],dy=-k*g[0];const f=N.reduce((a,l)=>a+(l.v-(dx*l.x+dy*(l.y-5.3))),0)/N.length;A=g.concat([dx,dy,f])}
+  else if(latVals.length>=2&&lonVals.length>=1&&lef.length&&rig.length){
+    pts.length=0;N.forEach(l=>pts.push([l.x,l.y-5.3,0,l.v]));const g=solve(3),k=KP/KM;
+    const ax=-g[1]/k,ay=g[0]/k;const c=E.reduce((a,l)=>a+(l.v-(ax*(l.x+l.w/2)+ay*l.y)),0)/E.length;A=[ax,ay,c].concat(g)}
+  else return null;
+  // 地図の枠：経緯度の文字のすぐ内側（図の枠線の位置で確かめた値）
+  const fr=[Math.max(...lef.map(l=>l.x+l.w))+6.6,Math.max(...top.map(l=>l.y))+7.8,Math.min(...rig.map(l=>l.x))-7.4,Math.min(...bot.map(l=>l.y))-17.2];
+  if(!(fr[2]>fr[0]+100&&fr[3]>fr[1]+100))return null;
+  return {A,fr,title,pts:pts.length};
+}
+const kpLL=(A,x,y)=>[A[3]*x+A[4]*y+A[5],A[0]*x+A[1]*y+A[2]]; // [緯度,経度]
+async function kpOne(name,data,onStep){
+  const pdf=await pdfjsLib.getDocument({data}).promise;
+  try{
+    const page=await pdf.getPage(1),vp1=page.getViewport({scale:1});
+    const g=kpGeoref((await page.getTextContent()).items,vp1);
+    if(!g)throw new Error(`「${name}」は図の縁の経緯度が読み取れないため、重ねられません`);
+    const [x0,y0,x1,y1]=g.fr;let S=KP_S;if((x1-x0)*(y1-y0)*S*S>15e6)S=Math.sqrt(15e6/((x1-x0)*(y1-y0)));
+    const W=Math.round((x1-x0)*S),H=Math.round((y1-y0)*S);
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,W,H);
+    onStep&&onStep('描いています');
+    await page.render({canvasContext:cx,viewport:page.getViewport({scale:S,offsetX:-x0*S,offsetY:-y0*S})}).promise;
+    const id=name.replace(/\s+/g,''),pieces=[];
+    onStep&&onStep('保存しています');
+    const pc=document.createElement('canvas');
+    for(let py=0;py<H;py+=KP_PIECE)for(let px=0;px<W;px+=KP_PIECE){
+      const w=Math.min(KP_PIECE,W-px),h=Math.min(KP_PIECE,H-py);pc.width=w;pc.height=h;const c2=pc.getContext('2d');c2.drawImage(cv,px,py,w,h,0,0,w,h);
+      let b=await new Promise(ok=>pc.toBlob(ok,'image/webp',.8));if(!b||b.type!=='image/webp')b=await new Promise(ok=>pc.toBlob(ok,'image/jpeg',.82));
+      const i=pieces.length;await idb.set(`kp:img:${id}:${i}`,b);
+      const cs=[[px,py],[px+w,py],[px,py+h],[px+w,py+h]].map(([u,v])=>kpLL(g.A,x0+u/S,y0+v/S));
+      pieces.push({i,px,py,w,h,bb:[Math.min(...cs.map(c=>c[1])),Math.min(...cs.map(c=>c[0])),Math.max(...cs.map(c=>c[1])),Math.max(...cs.map(c=>c[0]))],kb:Math.round(b.size/1024)})}
+    cv.width=cv.height=0;
+    const cs=[[x0,y0],[x1,y0],[x0,y1],[x1,y1]].map(([x,y])=>kpLL(g.A,x,y));
+    return {id,name:name.replace(/\.pdf$/i,'').replace(/^\d+_/,''),file:name,S,x0,y0,A:g.A,pieces,at:new Date().toISOString(),
+      bb:[Math.min(...cs.map(c=>c[1])),Math.min(...cs.map(c=>c[0])),Math.max(...cs.map(c=>c[1])),Math.max(...cs.map(c=>c[0]))]};
+  }finally{pdf.destroy()}
+}
+async function kpSave(){await idb.set('kp:meta',kpSheets)}
+async function kpRemove(s){for(const p of s.pieces)await idb.del(`kp:img:${s.id}:${p.i}`).catch(()=>{});kpBmp.forEach((v,k)=>{if(k.startsWith(s.id+':'))kpBmp.delete(k)})}
+// 読み込み（PDFでも、県からダウンロードしたzipのままでも）
+async function kpFiles(files){
+  const msg=t=>{const e=document.getElementById('kp-prog');e.hidden=!t;e.textContent=t||''};
+  const list=[];
+  try{
+    await kpLibs(files.some(f=>/\.zip$/i.test(f.name)));
+    for(const f of files){
+      if(/\.zip$/i.test(f.name)){const z=await JSZip.loadAsync(f,{decodeFileName:b=>{try{return new TextDecoder('shift_jis').decode(b)}catch(_){return String.fromCharCode(...b)}}});
+        z.forEach((p,e)=>{if(!e.dir&&/\.pdf$/i.test(p))list.push({name:p.split('/').pop(),get:()=>e.async('uint8array')})})}
+      else if(/\.pdf$/i.test(f.name))list.push({name:f.name,get:async()=>new Uint8Array(await f.arrayBuffer())})}
+  }catch(e){msg(e.message||'ファイルを開けませんでした');return}
+  if(!list.length){msg('PDF（またはPDFの入ったzip）を選んでください');return}
+  list.sort((a,b)=>a.name.localeCompare(b.name,'ja',{numeric:true}));
+  wake(true);let ok=0;const errs=[];document.getElementById('kp-file').disabled=true;
+  for(const [n,it] of list.entries()){
+    const step=t=>msg(`${n+1}/${list.length} 枚目「${it.name}」を${t}…（画面を消さずにお待ちください）`);
+    try{step('読んでいます');const s=await kpOne(it.name,await it.get(),step);
+      const old=kpSheets.find(x=>x.id===s.id);if(old){await kpRemove(old);kpSheets=kpSheets.filter(x=>x.id!==s.id)}
+      kpSheets.push(s);await kpSave();ok++;kpRefresh()}
+    catch(e){errs.push(e.message||it.name)}
+  }
+  wake(false);document.getElementById('kp-file').disabled=false;
+  msg(`${ok}枚の森林計画図を読み込みました（この端末に保存）。${errs.length?'読み込めなかったもの：'+errs.join('／'):''}`);
+  kpList();if(ok&&!kpOn)kpSet(true);
+}
+// 地図に重ねる：画面の地図の1枚ごとに、重なる図の画像を、位置を合わせて描く
+const kpBmp=new Map();
+function kpBitmap(s,p){const k=s.id+':'+p.i;if(kpBmp.has(k)){const v=kpBmp.get(k);kpBmp.delete(k);kpBmp.set(k,v);return v}
+  const v=idb.get(`kp:img:${s.id}:${p.i}`).then(b=>b?createImageBitmap(b):null);kpBmp.set(k,v);
+  while(kpBmp.size>16){const [k0,v0]=kpBmp.entries().next().value;kpBmp.delete(k0);v0.then(b=>b&&b.close&&b.close()).catch(()=>{})}
+  return v}
+const kpPane=map.createPane('kp');kpPane.style.zIndex=250;kpPane.style.mixBlendMode='multiply';kpPane.style.pointerEvents='none';
+const KPLayer=L.GridLayer.extend({createTile(c,done){const t=document.createElement('canvas');t.width=t.height=256;kpDraw(t,c).then(()=>done(null,t),()=>done(null,t));return t}});
+async function kpDraw(t,c){
+  const ctx=t.getContext('2d'),nw=L.point(c.x*256,c.y*256),a=map.unproject(nw,c.z),b=map.unproject(nw.add([256,256]),c.z);
+  const tb=[Math.min(a.lng,b.lng),Math.min(a.lat,b.lat),Math.max(a.lng,b.lng),Math.max(a.lat,b.lat)];
+  const hit=(q)=>!(q[2]<tb[0]||q[0]>tb[2]||q[3]<tb[1]||q[1]>tb[3]);
+  for(const s of kpSheets){if(!hit(s.bb))continue;
+    for(const p of s.pieces){if(!hit(p.bb))continue;const bmp=await kpBitmap(s,p);if(!bmp)continue;
+      const P=(u,v)=>{const [la,lo]=kpLL(s.A,s.x0+(p.px+u)/s.S,s.y0+(p.py+v)/s.S);return map.project([la,lo],c.z).subtract(nw)};
+      const P0=P(0,0),P1=P(p.w,0),P2=P(0,p.h);
+      ctx.setTransform((P1.x-P0.x)/p.w,(P1.y-P0.y)/p.w,(P2.x-P0.x)/p.h,(P2.y-P0.y)/p.h,P0.x,P0.y);ctx.drawImage(bmp,0,0)}}
+  ctx.setTransform(1,0,0,1,0,0);
+}
+const KP_ATTR='森林計画図：鹿児島県（この成果品は、鹿児島県森林資源情報データ（ダウンロード）から作成したものである）';
+function kpRefresh(){if(kpLayer)kpLayer.redraw()}
+function kpApply(){
+  document.getElementById('kp').setAttribute('aria-pressed',kpOn&&kpSheets.length>0);
+  if(kpOn&&kpSheets.length){if(!kpLayer)kpLayer=new KPLayer({pane:'kp',minZoom:14,maxZoom:19,opacity:.9,updateWhenZooming:false,keepBuffer:1});
+    if(!map.hasLayer(kpLayer)){kpLayer.addTo(map);map.attributionControl.addAttribution(KP_ATTR)}}
+  else if(kpLayer&&map.hasLayer(kpLayer)){kpLayer.remove();map.attributionControl.removeAttribution(KP_ATTR)}
+}
+function kpSet(on){kpOn=on;try{LS.setItem('ui:kp',on?'on':'off')}catch(e){}kpApply()}
+document.getElementById('kp').onclick=()=>{
+  if(!kpSheets.length){kpOpen();return}
+  kpSet(!kpOn);toast(kpOn?(map.getZoom()<14?'地図を拡大すると森林計画図が重なります':'森林計画図を重ねました（白い所は透けます）'):'森林計画図を外しました')};
+function kpList(){
+  const box=document.getElementById('kp-list');box.replaceChildren();
+  document.getElementById('kp-sum').textContent=kpSheets.length?`この端末に ${kpSheets.length}枚（約${Math.round(kpSheets.reduce((a,s)=>a+s.pieces.reduce((b,p)=>b+(p.kb||0),0),0)/1024)}MB）`:'まだ読み込んでいません';
+  kpSheets.slice().sort((a,b)=>a.name.localeCompare(b.name,'ja',{numeric:true})).forEach(s=>{
+    const r=document.createElement('div');r.className='kp-row';const n=document.createElement('button');n.type='button';n.className='kp-name';n.textContent=s.name;
+    n.onclick=()=>{document.getElementById('kpp').hidden=true;if(!kpOn)kpSet(true);map.fitBounds(L.latLngBounds([s.bb[1],s.bb[0]],[s.bb[3],s.bb[2]]))};
+    const d=document.createElement('button');d.type='button';d.className='kp-del';d.textContent='消す';
+    d.onclick=async()=>{await kpRemove(s);kpSheets=kpSheets.filter(x=>x!==s);await kpSave();kpList();kpRefresh();kpApply()};
+    r.append(n,d);box.append(r)});
+  document.getElementById('kp-clear').hidden=!kpSheets.length;
+}
+function kpOpen(){kpList();document.getElementById('kpp').hidden=false}
+document.getElementById('kp-file').addEventListener('change',e=>{const f=[...e.target.files];e.target.value='';if(f.length)kpFiles(f)});
+document.getElementById('kp-close').onclick=()=>document.getElementById('kpp').hidden=true;
+document.getElementById('kpp').addEventListener('click',e=>{if(e.target.id==='kpp')e.target.hidden=true});
+document.getElementById('kp-clear').onclick=async e=>{const b=e.currentTarget;if(!b.dataset.ok){b.dataset.ok=1;b.textContent='本当にすべて消す';return}
+  delete b.dataset.ok;b.textContent='すべて消す';for(const s of kpSheets)await kpRemove(s);kpSheets=[];await kpSave();kpList();kpApply()};
+document.getElementById('kp-manage').onclick=()=>{document.getElementById('recp').hidden=true;kpOpen()};
+idb.get('kp:meta').then(m=>{kpSheets=Array.isArray(m)?m:[];kpApply()}).catch(()=>{});
 
 // ---- 記録の受け渡し（メモ・地積・伐採届・踏査ルートをファイルで別の端末へ） ----
 const REC_NS=['memo','mlabel','chiseki','bassai','rireki'];
