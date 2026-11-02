@@ -387,7 +387,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-01p</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-02a</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -563,7 +563,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
 <script src="config.js"></script>
 <script>
 // ---- 町ごとの設定（config.js）。無いときは錦江町の設定で動く ----
-const CFG=Object.assign({id:'kinko',title:'錦江町森林管理システム',ns:'',idb:'kinko-forest',recApp:'kinko-forest',filePrefix:'kinko-kiroku',
+const CFG=Object.assign({id:'kinko',title:'錦江町森林ナビ',ns:'',idb:'kinko-forest',recApp:'kinko-forest',filePrefix:'kinko-kiroku',
   center:[31.215,130.79],oazaAlias:{'麓':'田代麓','川原':'田代川原'},town:{'田代麓':'田代町','田代川原':'田代町','神川':'大根占町','馬場':'大根占町','城元':'大根占町'},
   townList:['田代町','大根占町'],csvHint:'錦江町分の森林簿CSV（田代町・大根占町の2ファイル）',kkOffice:'大隅森林管理署'},window.CFG||{});
 document.title=CFG.title;document.querySelector('header h1').textContent=CFG.h1||CFG.title;
@@ -1898,7 +1898,7 @@ document.getElementById('rec-share').onclick=async()=>{const r=await recFile();i
   const f=r.txt;rpMsg('共有の画面を開いています…');
   try{
     if(navigator.canShare&&!navigator.canShare({files:[f]}))throw Object.assign(new Error('x'),{name:'NotSupported'});
-    await navigator.share({files:[f],title:'森林管理システムの記録'});rpMsg(`${r.count}件の記録を共有しました`)
+    await navigator.share({files:[f],title:'森林ナビの記録'});rpMsg(`${r.count}件の記録を共有しました`)
   }catch(e){
     if(e&&e.name==='AbortError'){rpMsg('共有を取りやめました');return}
     saveRec(r);rpMsg(`共有できなかったので、ダウンロードフォルダに「${r.file.name}」を保存しました。そのファイルをLINEやメールで送ってください。（理由：${e&&e.name||'不明'}）`);

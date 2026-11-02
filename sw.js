@@ -1,5 +1,5 @@
-// 錦江町 森林管理システム：オフラインでも開けるようにするための仕組み
-const VER='v64';
+// 森林ナビ（町ごとの版・かごしま森林ナビ 大隅で共通）：オフラインでも開けるようにするための仕組み
+const VER='v65';
 // この仕組みが置かれたフォルダ（例：/my-first-repo/app/）。町ごとのフォルダで同じファイルを使う
 const BASE=new URL(self.registration.scope).pathname;
 const PFX=BASE.endsWith('/app/')?'forest':BASE.split('/').filter(Boolean).pop(); // 錦江町は今までどおり「forest」
