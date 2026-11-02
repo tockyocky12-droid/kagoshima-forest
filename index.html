@@ -387,7 +387,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-02a</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-02b</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -523,7 +523,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <div><label for="b-from">伐採開始</label><input id="b-from" type="date"></div>
       <div><label for="b-to">伐採終了</label><input id="b-to" type="date"></div>
     </div>
-    <div class="bnote">伐採届のある地番は、地図で赤い点線の枠になります。地図に文字を出すときは「メモ表示」タブで入力します。</div>
+    <div class="bnote">伐採届のある地番は、地図で赤い点線の枠になります（伐採の期間が終わったものは灰色の点線）。地図に文字を出すときは「メモ表示」タブで入力します。</div>
     <div class="bdel" id="b-delrow"><button type="button" id="b-del" class="bdelbtn">この伐採届を削除</button></div>
   </div>
   </div>
@@ -866,7 +866,10 @@ function styleFor(f){
   if(!sel&&otherMuni(f.properties))return DIM();
   const tc=tint!=='none'?tintColor(f):null;
   if(sel)return {color:'#facc15',weight:3,fillOpacity:tc?.75:.25,fillColor:tc||'#facc15'};
-  if(bassaiOf(f.properties)||mlabelOf(f.properties))return {color:'#dc2626',weight:2.5,dashArray:'6 4',fillOpacity:tc?.6:.22,fillColor:tc||'#dc2626'};
+  // 伐採届：伐採の期間が終わったもの（メモ表示なし）は灰色の細い点線、期間中・これからのもの・メモ表示ありは赤い点線
+  {const b=bassaiOf(f.properties),ml=mlabelOf(f.properties);
+    if(b&&!ml&&isDone(b))return {color:isPhoto()?'#e7e5e4':'#78716c',weight:1.6,dashArray:'4 4',fillOpacity:tc?.6:.08,fillColor:tc||'#78716c'};
+    if(b||ml)return {color:'#dc2626',weight:2.5,dashArray:'6 4',fillOpacity:tc?.6:.22,fillColor:tc||'#dc2626'}}
   if(tc)return {color:isPhoto()?'#fde68a':'#3d2b1f',weight:.6,fillOpacity:.6,fillColor:tc};
   return {color:isPhoto()?'#fde68a':'#c2410c',weight:1,fillOpacity:.04,fillColor:'#c2410c'};
 }
