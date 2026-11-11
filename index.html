@@ -390,7 +390,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-12a</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-12b</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -949,7 +949,9 @@ function drawLegend(){
   const hid=hideT[tint]||[];
   const {m:areas,unit}=legendAreas();const tot=[...areas.values()].reduce((a,b)=>a+b,0);
   const hd=document.createElement('div');hd.className='lgh';hd.append((tint==='rireki'?'最新の施業':tint==='age'?'林齢':tint==='own'?'所有形態':'樹種')+`（${unit==='ha'?'面積ha':'地番数'}）`);
-  if(hid.length){const a=document.createElement('button');a.type='button';a.className='lgall';a.textContent='すべて表示';a.onclick=()=>setHide([]);hd.append(a)}
+  // 一部を外しているときは「すべて表示」、全部出ているときは「すべて外す」（ひとつだけ見たいときは、すべて外してから選ぶ）
+  {const a=document.createElement('button');a.type='button';a.className='lgall';
+   if(hid.length){a.textContent='すべて表示';a.onclick=()=>setHide([])}else{a.textContent='すべて外す';a.onclick=()=>setHide(items.map(x=>x[1]))}hd.append(a)}
   lg.append(hd);
   items.forEach(([n,c])=>{const on=!hid.includes(c);
     const row=document.createElement('div');row.className='lgr'+(on?'':' off');
@@ -957,12 +959,10 @@ function drawLegend(){
     const ck=document.createElement('span');ck.className='lgck';ck.textContent=on?'✓':'';
     const i=document.createElement('i');i.style.background=c;b.append(ck,i,document.createTextNode(n));
     b.onclick=()=>setHide(on?hid.concat([c]):hid.filter(x=>x!==c));
-    const o=document.createElement('button');o.type='button';o.className='lgo';o.textContent='だけ';o.title=n+'だけを表示';
-    o.onclick=()=>{setHide(items.map(x=>x[1]).filter(x=>x!==c));toast(`${n}だけを表示しています`)};
     const a=areas.get(c)||0;const v=document.createElement('span');v.className='lga';
     v.textContent=unit==='ha'?(a?`${a>=10?Math.round(a).toLocaleString():a.toFixed(1)}`:'—'):String(a);
     if(tot&&a){const pc=document.createElement('small');pc.textContent=` ${(a/tot*100).toFixed(0)}%`;v.append(pc)}
-    row.append(b,v,o);lg.append(row)});
+    row.append(b,v);lg.append(row)});
   if(!tot&&MULTI&&unit==='ha'){const t=document.createElement('div');t.className='lgtot';t.textContent=`${(MUNI[muniSel.value]||{}).name||'この市町村'}の森林簿がまだ読み込まれていないので、面積は出ません`;lg.append(t)}
   if(tot){const t=document.createElement('div');t.className='lgtot';t.append(`合計 ${unit==='ha'?Math.round(tot).toLocaleString()+' ha':tot+' 地番'}`);
     if(unit==='ha')t.append(document.createElement('br'),'（'+(MULTI?`${(MUNI[muniSel.value]||{}).name||''}の`:'')+(kkOn?(kkParts&&!kkSum?'民有林の森林簿＋国有林。国有林は地図で見た範囲の分':'民有林の森林簿＋国有林'):'民有林の森林簿。国有林は「国有林」ボタンで加わります')+'）');lg.append(t)}
