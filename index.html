@@ -202,7 +202,9 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .brow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .brow>div{min-width:0}
 .bnote{font-size:11px;color:var(--muted)}
-.bhist{border-top:1px solid var(--line);padding-top:8px;font-size:12.5px;line-height:1.45}.bh-t{font-weight:700;margin-bottom:4px}.bh-i{padding:5px 0;border-bottom:1px dashed var(--line)}.bh-i b{font-family:var(--f-data)}
+.bper{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}.bper span{color:var(--muted)}
+.bmore{border-top:1px solid var(--line);padding-top:6px}.bmore>summary,.bhist>summary{cursor:pointer;font-size:13px;color:var(--muted);padding:4px 0}.bmore[open]>summary{margin-bottom:4px}
+.bhist{border-top:1px solid var(--line);padding-top:6px;font-size:12.5px;line-height:1.45}.bh-t{font-weight:700;margin-bottom:4px}.bh-i{padding:5px 0;border-bottom:1px dashed var(--line)}.bh-i b{font-family:var(--f-data)}
 .msub{margin-top:10px}
 .msub>label{font-size:13px;font-weight:700;color:var(--fg);display:block;margin-bottom:4px}
 .msub>input{width:100%;min-width:0;font:inherit;font-family:var(--f-data);padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
@@ -388,7 +390,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-02d</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-11a</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -520,10 +522,10 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <div><label for="b-method">伐採方法</label>
         <select id="b-method"><option value="">—</option><option>皆伐</option><option>択伐</option><option>間伐</option></select></div>
     </div>
-    <div class="brow">
-      <div><label for="b-from">伐採開始</label><input id="b-from" type="date"></div>
-      <div><label for="b-to">伐採終了</label><input id="b-to" type="date"></div>
-    </div>
+    <div><label for="b-from">伐採期間</label>
+      <div class="bper"><input id="b-from" type="date" aria-label="伐採開始"><span>〜</span><input id="b-to" type="date" aria-label="伐採終了"></div></div>
+    <details class="bmore" id="b-more"><summary id="b-more-s">くわしい項目</summary>
+    <div class="bas">
     <div class="brow">
       <div><label for="b-no">届出番号</label><input id="b-no" type="text" autocomplete="off"></div>
       <div><label for="b-area">伐採面積（ha）</label><input id="b-area" type="text" inputmode="decimal" autocomplete="off"></div>
@@ -533,8 +535,10 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <div><label for="b-sp">樹種・林齢</label><input id="b-sp" type="text" autocomplete="off"></div>
     </div>
     <div><label for="b-own">所有者</label><input id="b-own" type="text" autocomplete="off"></div>
-    <div id="b-hist" class="bhist" hidden></div>
-    <div class="bnote">伐採届のある地番は、地図で赤い点線の枠になります（伐採の期間が終わったものは灰色の点線）。地図に文字を出すときは「メモ表示」タブで入力します。</div>
+    </div>
+    </details>
+    <details id="b-hist" class="bhist" hidden></details>
+    <div class="bnote">地図の枠：赤い点線＝期間中・これから、灰色の点線＝期間終了</div>
     <div class="bdel" id="b-delrow"><button type="button" id="b-del" class="bdelbtn">この伐採届を削除</button></div>
   </div>
   </div>
@@ -678,7 +682,7 @@ function bDelRow(){ // 伐採届の削除ボタン（記録があるときだけ
     const y=document.createElement('button');y.type='button';y.className='bdelbtn solid';y.textContent='削除する';
     y.onclick=()=>{const layer=selected;if(!layer)return;clearTimeout(bt);
       if(!store.set(keyOf(layer.feature.properties),'','bassai')){toast('削除できませんでした');return}
-      BF.forEach(f=>document.getElementById('b-'+f).value='');bHist({});
+      BF.forEach(f=>document.getElementById('b-'+f).value='');bMoreSum();bHist({});
       applyLabel(layer);parcels.resetStyle(layer);if(selected===layer)layer.setStyle(styleFor(layer.feature));updateDots();bDelRow();toast('伐採届を削除しました')};
     const n=document.createElement('button');n.type='button';n.className='plain';n.textContent='やめる';n.onclick=bDelRow;
     row.append(q,y,n)};
@@ -687,6 +691,7 @@ function bDelRow(){ // 伐採届の削除ボタン（記録があるときだけ
 BF.forEach(k=>document.getElementById('b-'+k).addEventListener('change',()=>{
   clearTimeout(bt);const layer=selected,key=currentKey;if(!layer)return;
   bt=setTimeout(()=>{
+    bMoreSum();
     const o={};BF.forEach(f=>{const v=document.getElementById('b-'+f).value.trim();if(v)o[f]=v});
     const old=bassaiRaw(layer.feature.properties);if(old&&Array.isArray(old.hist)&&old.hist.length)o.hist=old.hist; // 過去の届出はそのまま残す
     const ok=store.set(key,Object.keys(o).length?JSON.stringify(o):'','bassai');
@@ -695,8 +700,12 @@ BF.forEach(k=>document.getElementById('b-'+k).addEventListener('change',()=>{
   },400);
 }));
 // この地番のほかの伐採届（取り込んだ整理簿の同じ日の別の届出や、古い届出）。見るだけの一覧
-function bHist(b){const el=document.getElementById('b-hist');el.replaceChildren();const h=Array.isArray(b.hist)?b.hist:[];el.hidden=!h.length;if(!h.length)return;
-  const t=document.createElement('div');t.className='bh-t';t.textContent=`この地番のほかの届出（${h.length}件・新しい順）`;el.append(t);
+// 「くわしい項目」は閉じておき、入力済みの件数だけ見出しに出す
+const BMORE=['no','area','app','sp','own'];
+function bMoreSum(){const n=BMORE.filter(f=>document.getElementById('b-'+f).value.trim()).length;
+  document.getElementById('b-more-s').textContent=n?`くわしい項目（${n}件入力あり）`:'くわしい項目（届出番号・面積・届出者など）'}
+function bHist(b){const el=document.getElementById('b-hist');el.replaceChildren();el.open=false;const h=Array.isArray(b.hist)?b.hist:[];el.hidden=!h.length;if(!h.length)return;
+  const t=document.createElement('summary');t.textContent=`この地番のほかの届出（${h.length}件）`;el.append(t);
   h.forEach(x=>{const d=document.createElement('div');d.className='bh-i';
     const a=document.createElement('b');a.textContent=[x.date||'—',x.no?`No.${x.no}`:''].filter(Boolean).join('　');
     const per=x.from||x.to?`${x.from||''}〜${x.to||''}`:'';
@@ -1060,7 +1069,7 @@ function openSheet(layer){
   rows.forEach(([k,v])=>{const dt=document.createElement('dt');dt.textContent=k;const dd=document.createElement('dd');dd.textContent=v;dl.append(dt,dd)});
   renderForest(p);
   const b=bassaiRaw(p)||{};
-  BF.forEach(k=>document.getElementById('b-'+k).value=b[k]||'');bHist(b);bDelRow();
+  BF.forEach(k=>document.getElementById('b-'+k).value=b[k]||'');document.getElementById('b-more').open=false;bMoreSum();bHist(b);bDelRow();
   }
   rkClose();renderRireki();
   document.getElementById('memo').value=store.get(currentKey);
