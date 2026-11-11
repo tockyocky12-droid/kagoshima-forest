@@ -251,10 +251,10 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .disc{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--fg)!important}
 /* 踏査ルート */
 /* 踏査ボタン：丸い現在地ボタンと見分けやすいよう、紫の横長ボタンに「道筋とピン」の絵と文字 */
-#trk{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(102px + env(safe-area-inset-bottom,0px));z-index:900;
-  height:48px;border-radius:24px;border:2px solid #fff;background:#a21caf;color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;
-  display:flex;align-items:center;gap:6px;font:inherit;font-size:15px;font-weight:700;line-height:1;padding:0 16px 0 12px;white-space:nowrap}
-#trk svg{width:24px;height:24px;flex:none}
+#trk{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(98px + env(safe-area-inset-bottom,0px));z-index:900;
+  width:56px;height:70px;border-radius:28px;border:2px solid #fff;background:#a21caf;color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:inherit;font-size:12.5px;font-weight:700;letter-spacing:.04em;line-height:1;padding:0;white-space:nowrap}
+#trk svg{width:26px;height:26px;flex:none}
 #trk .rdot{display:none;width:10px;height:10px;border-radius:50%;background:#fff;animation:tbb 1.2s infinite}
 #trk.rec{background:#dc2626}
 #trk.rec .rdot{display:inline-block}
@@ -390,7 +390,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-11c</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-12a</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
