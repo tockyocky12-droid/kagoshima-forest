@@ -390,7 +390,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-11b</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-11c</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1287,9 +1287,12 @@ document.getElementById('search').addEventListener('submit',async e=>{
   // 大きな市町村は検索用の一覧で探し、当てはまる地番のあるファイルだけ読む
   // 町ごとの版は data/search.json（版は地番データの版から作る）
   const si=MULTI?searchIdx[muniSel.value]:(districts.length?{file:'search.json',v:districts.map(d=>d.v||'').join('').slice(0,120)}:null);
-  if(si){try{const L2=await searchList(MULTI?muniSel.value:'_',si);const need=new Set();let nb=0;
-      for(const r of L2.rows){const c=nz(r[1]);if(c===qq)need.add(r[2]);else if(c.startsWith(qq+'-')&&nb<100){need.add(r[2]);nb++}}
-      const files=new Set([...need].map(i=>(MULTI?muniSel.value+'/':'')+L2.files[i]));scope=scope.filter(d=>files.has(d.file))}
+  if(si){try{const L2=await searchList(MULTI?muniSel.value:'_',si);const need=new Set();let nb=0,nbAll=0;const ex=[],br=[];
+      for(const r of L2.rows){const c=nz(r[1]);if(c===qq){need.add(r[2]);ex.push(r)}else if(c.startsWith(qq+'-')){nbAll++;if(nb<100){need.add(r[2]);nb++;br.push(r)}}}
+      const pre=MULTI?muniSel.value+'/':'';
+      // 読むファイルが3つ以上になるときは、地番データを読まずに「地番と大字」の候補を先に出し、選んだ分だけ読む（通信量を抑える）
+      if(need.size>2){toastEl.hidden=true;showLiteCands(q,ex,br,nbAll-nb,L2,pre,scope);return}
+      const files=new Set([...need].map(i=>pre+L2.files[i]));scope=scope.filter(d=>files.has(d.file))}
     catch(_){toast('検索の一覧を読み込めませんでした。通信状態を確認してください');return}}
   await Promise.all(scope.map(loadDistrict));
   toastEl.hidden=true;
@@ -1301,6 +1304,35 @@ document.getElementById('search').addEventListener('submit',async e=>{
   if(hits.length===1){goTo(hits[0]);return}
   showCands(q,exact,branch);
 });
+// 簡単な候補（地番と大字だけ）：選んだ地番のファイルだけを読み込んで移動する
+function showLiteCands(q,ex,br,more,L2,pre,scope){
+  const mc=MULTI?muniSel.value:null,mn=MULTI?((MUNI[mc]||{}).name||''):'';
+  const uniq=rows=>{const m=new Map();rows.forEach(r=>{const k=r[0]+'\t'+nz(r[1]);if(!m.has(k))m.set(k,{oaza:r[0],no:r[1],f:new Set()});m.get(k).f.add(r[2])});return [...m.values()]};
+  const exU=uniq(ex),brU=uniq(br);
+  cands.replaceChildren();
+  const head=document.createElement('div');head.className='chead';head.append(`「${q}」の候補 ${exU.length+brU.length+more} 件`);
+  const x=document.createElement('button');x.type='button';x.className='cx';x.textContent='×';x.setAttribute('aria-label','候補を閉じる');x.onclick=closeCands;head.append(x);
+  cands.append(head);
+  const pick1=async it=>{
+    const fs=new Set([...it.f].map(i=>pre+L2.files[i]));
+    await Promise.all(scope.filter(d=>fs.has(d.file)).map(loadDistrict));toastEl.hidden=true;
+    const hit=index.find(l=>{const p=l.feature.properties;return (!MULTI||p.__m===mc)&&nz(chibanOf(p))===nz(it.no)&&pick(p,['大字名','oaza','OAZA'])===it.oaza});
+    if(hit)goTo(hit);else toast(`「${it.no}」を読み込めませんでした。通信状態を確認してください`)};
+  const group=(title,list)=>{
+    if(!list.length)return;
+    const t=document.createElement('div');t.className='cgrp';t.textContent=title;cands.append(t);
+    list.sort((a,b)=>a.oaza.localeCompare(b.oaza,'ja')||a.no.localeCompare(b.no,'ja',{numeric:true})).forEach(it=>{
+      const b=document.createElement('button');b.type='button';b.className='citem';
+      const a=document.createElement('span');a.className='cno';a.textContent=it.no;
+      const o=document.createElement('span');o.className='coz';o.textContent=[mn,it.oaza].filter(Boolean).join(' ');
+      const s=document.createElement('span');s.className='csum';s.textContent='選ぶと地番を読み込みます';
+      b.append(a,o,s);b.onclick=()=>pick1(it);cands.append(b)});
+  };
+  group('一致する地番',exU);
+  group(`「${q}-」で始まる地番`,brU);
+  if(more>0){const m=document.createElement('div');m.className='cgrp';m.textContent=`ほか ${more} 件（地番をもっと詳しく入れてください）`;cands.append(m)}
+  cands.hidden=false;cands.scrollTop=0;
+}
 const searchLists={};
 function searchList(mc,si){return searchLists[mc]||(searchLists[mc]=fetch(`data/${si.file}?v=${si.v}`).then(r=>{if(!r.ok)throw 0;return r.json()})
   .then(o=>({files:o.files,rows:o.rows.split('\n').map(t=>{const a=t.split(',');return [o.oaza[+a[0]],a[1],+a[2]]})})).catch(e=>{delete searchLists[mc];throw e}))}
