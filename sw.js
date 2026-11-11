@@ -1,12 +1,12 @@
 // 森林ナビ（町ごとの版・かごしま森林ナビ 大隅で共通）：オフラインでも開けるようにするための仕組み
-const VER='v69';
+const VER='v70';
 // この仕組みが置かれたフォルダ（例：/my-first-repo/app/）。町ごとのフォルダで同じファイルを使う
 const BASE=new URL(self.registration.scope).pathname;
 const PFX=BASE.endsWith('/app/')?'forest':BASE.split('/').filter(Boolean).pop(); // 錦江町は今までどおり「forest」
 const SHELL=PFX+'-shell-'+VER, DATA=PFX+'-data-v1', TILES=PFX+'-tiles-v1';
 const STATIC=PFX+'-static-v1'; // 地図の部品（Leaflet）と文字（フォント）：アプリを更新しても消さない（読み直しの通信をしない）
 const SHELL_FILES=['./','./index.html','./config.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
-const STATIC_FILES=['https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'];
+const STATIC_FILES=['./lib/leaflet-1.9.4/leaflet.css','./lib/leaflet-1.9.4/leaflet.js']; // 地図の部品はアプリと同じ場所に置いた（外部のサーバーに頼らない）
 const TILE_MAX=6000;            // 一度見た地図の画像を覚えておく枚数
 const SAVED='gsi-saved-v1';      // 「地図を端末に保存」で保存した画像（自動では消さない。どのアプリからも使う）
 
@@ -61,6 +61,7 @@ self.addEventListener('fetch',e=>{
   if(u.origin===location.origin&&u.pathname.startsWith(BASE+'kokuyu/')){e.respondWith(dataCache(req));return}
   // 地図の画像は保存分を先に使う（画面から直接読むもの＝保存処理や標高の計算は、そのまま通す）
   if(u.hostname==='cyberjapandata.gsi.go.jp'){if(req.destination==='image')e.respondWith(cacheFirst(req,TILES,TILE_MAX));return}
+  if(u.origin===location.origin&&u.pathname.startsWith(BASE+'lib/')){e.respondWith(cacheFirst(req,STATIC));return} // 版番号つきのフォルダなので保存分を使う
   if(u.hostname==='cdnjs.cloudflare.com'||u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'){e.respondWith(cacheFirst(req,STATIC));return}
   // 設定ファイル（config.js）と目録類は、ブラウザの一時保存を使わず毎回最新を確認する（本体と設定の食い違いを防ぐ）
   if(u.origin===location.origin&&(u.pathname===BASE+'config.js'||u.pathname===BASE+'manifest.webmanifest')){e.respondWith(networkFirst(req,SHELL,true));return}
