@@ -1,5 +1,5 @@
 // 森林ナビ（町ごとの版・かごしま森林ナビ 大隅で共通）：オフラインでも開けるようにするための仕組み
-const VER='v73';
+const VER='v74';
 // この仕組みが置かれたフォルダ（例：/my-first-repo/app/）。町ごとのフォルダで同じファイルを使う
 const BASE=new URL(self.registration.scope).pathname;
 const PFX=BASE.endsWith('/app/')?'forest':BASE.split('/').filter(Boolean).pop(); // 錦江町は今までどおり「forest」
@@ -15,8 +15,14 @@ self.addEventListener('install',e=>{
     caches.open(STATIC).then(c=>Promise.all(STATIC_FILES.map(async u=>{if(!(await c.match(u)))await c.add(u).catch(()=>{})})))]).then(()=>self.skipWaiting()));
 });
 self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(PFX+'-shell-')&&k!==SHELL).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(PFX+'-shell-')&&k!==SHELL).map(k=>caches.delete(k)))).then(()=>self.clients.claim())
+    .then(()=>purgeOpaque()));
 });
+// 以前の版で保存した「中身の見えない形」の地図画像などを消す（容量の見かけを実際の大きさに戻す）
+async function purgeOpaque(){
+  for(const name of [TILES,STATIC,SAVED]){try{const c=await caches.open(name);
+    for(const k of await c.keys()){const r=await c.match(k);if(r&&r.type==='opaque')await c.delete(k)}}catch(_){}}
+}
 
 async function networkFirst(req,cacheName,fresh){
   const c=await caches.open(cacheName);
@@ -26,9 +32,12 @@ async function networkFirst(req,cacheName,fresh){
 }
 async function cacheFirst(req,cacheName,trim){
   const c=await caches.open(cacheName);
-  const m=(await c.match(req))||(await (await caches.open(SAVED)).match(req.url));if(m)return m;
+  let m=(await c.match(req))||(await (await caches.open(SAVED)).match(req.url));
+  if(m&&m.type==='opaque'&&req.mode==='cors'){c.delete(req).catch(()=>{});m=null} // 古い形で保存した画像は使わずに取り直す
+  if(m)return m;
   const r=await fetch(req);
-  if(r&&(r.ok||r.type==='opaque')){c.put(req,r.clone()).then(()=>{if(trim)trimCache(c,trim)}).catch(()=>{})}
+  // 中身の見えない形（opaque）は保存しない：Chromeは1件を約7MBとして数え、容量不足と判断して保存データを消す原因になる
+  if(r&&r.ok&&r.type!=='opaque'){c.put(req,r.clone()).then(()=>{if(trim)trimCache(c,trim)}).catch(()=>{})}
   return r;
 }
 // 地番データ：同じURL（版番号つき）なら保存分を使い、新しい版を取ったら古い版を消す
