@@ -225,6 +225,12 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .lbtn{margin-left:auto;font:inherit;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
 .kkbtn{margin-left:auto}
 .kkbtn+.lbtn{margin-left:0}
+#chb+.lbtn{margin-left:6px}
+/* 地番の番号（拡大したときだけ、画面に映っている筆に出す） */
+.chlbl{background:none!important;border:0!important}
+.chlbl span{display:block;transform:translate(-50%,-50%);font:700 11px/1 "BIZ UDGothic","Hiragino Sans",sans-serif;color:#1f3d2b;white-space:nowrap;pointer-events:none;
+  text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff,0 0 3px #fff}
+.ph .chlbl span{color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 0 3px #000}
 .kkbtn[aria-pressed="true"]{border-color:#0e7490!important;color:#0e7490!important}
 .kpbtn{margin-left:0}
 .dl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
@@ -393,7 +399,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17a</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17b</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -412,6 +418,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
   </div>
   <button id="kk" class="lbtn kkbtn" type="button" aria-pressed="false">国有林</button>
   <button id="kp" class="lbtn kpbtn" type="button" aria-pressed="false">計画図</button>
+  <button id="chb" class="lbtn" type="button" aria-pressed="true">地番</button>
   <button id="lbl" class="lbtn" type="button" aria-pressed="true">メモ表示</button>
   <span class="fwrap"><span id="fload" class="fbtn">森林簿CSVを読み込む</span><input id="ffile" class="fover" type="file" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain" multiple aria-label="森林簿CSVを選ぶ"></span>
   <span id="fmiss" class="fmiss" hidden></span>
@@ -636,6 +643,7 @@ function setBase(p){
   (p?std:photo).remove();(p?photo:std).addTo(map);
   document.getElementById('bm-std').setAttribute('aria-pressed',!p);
   document.getElementById('bm-photo').setAttribute('aria-pressed',p);
+  map.getContainer().classList.toggle('ph',!!p);
   if(parcels) parcels.setStyle(styleFor);
   if(kkLayer) kkLayer.setStyle(kkStyle);
 }
@@ -665,7 +673,7 @@ function applyLabel(l){
   const p=l.feature.properties,t=mlabelOf(p),b=bassaiOf(p);
   if(l.getTooltip())l.unbindTooltip();
   if(t)l.bindTooltip(t,{permanent:true,direction:'center',className:'blabel'+(b&&isDone(b)?' done':' bas'),interactive:false});
-  scheduleDeclutter();
+  scheduleDeclutter();if(typeof chRefresh==='function')chRefresh();
 }
 // メモ画面表示の文字：地番の境界が見える拡大率で表示する
 const LABEL_Z=14;let dt2; // 文字は地番の境界が出る拡大率と同じから表示
@@ -675,8 +683,32 @@ function declutter(){ // 入力した文字はすべて表示する（重なっ�
 }
 map.on('zoomend moveend',scheduleDeclutter);
 let lblOn=true;try{lblOn=LS.getItem('ui:lbl2')!=='off'}catch(e){} // 名前を「メモ表示」に変えたので、表示を入れた状態から始める
-function setLbl(on){lblOn=on;map.getContainer().classList.toggle('lb-off',!on);document.getElementById('lbl').setAttribute('aria-pressed',on);
+function setLbl(on){lblOn=on;if(typeof chRefresh==='function')chRefresh();map.getContainer().classList.toggle('lb-off',!on);document.getElementById('lbl').setAttribute('aria-pressed',on);
   try{LS.setItem('ui:lbl2',on?'on':'off')}catch(e){} scheduleDeclutter()}
+// 地番の番号を地図に出す：拡大率17以上で、画面に映っている筆だけ。小さい筆・重なる所・メモの文字がある筆は省く
+const CH_Z=17,CH_MAX=350;let chOn=true;try{chOn=LS.getItem('ui:chiban')!=='off'}catch(e){}
+const chLayer=L.layerGroup().addTo(map);let chT;
+function chRefresh(){clearTimeout(chT);chT=setTimeout(chDraw,150)}
+function chDraw(){
+  chLayer.clearLayers();if(!chOn||map.getZoom()<CH_Z)return;
+  const vb=map.getBounds().pad(0.1),cand=[];
+  for(const l of index){
+    if(!map.hasLayer(l))continue;const b=l._chB||(l._chB=l.getBounds());if(!vb.intersects(b))continue;
+    const p=l.feature.properties,n=chibanOf(p);if(!n||(lblOn&&mlabelOf(p)))continue;
+    const a=map.latLngToContainerPoint(b.getNorthWest()),c=map.latLngToContainerPoint(b.getSouthEast());
+    const w=Math.abs(c.x-a.x),h=Math.abs(c.y-a.y);const tw=String(n).length*6.6+6;if(w<tw||h<14)continue;   // 番号が入らない小さい筆は省く
+    cand.push({l,n:String(n),s:w*h,tw})}
+  cand.sort((x,y)=>y.s-x.s);const used=[];let k=0;
+  for(const c of cand){if(k>=CH_MAX)break;
+    let ll;try{ll=c.l.getCenter()}catch(_){continue}
+    const pt=map.latLngToContainerPoint(ll),r={x0:pt.x-c.tw/2,x1:pt.x+c.tw/2,y0:pt.y-8,y1:pt.y+8};
+    if(used.some(u=>r.x0<u.x1&&r.x1>u.x0&&r.y0<u.y1&&r.y1>u.y0))continue;used.push(r);k++;
+    L.marker(ll,{icon:L.divIcon({className:'chlbl',html:'<span></span>',iconSize:[0,0]}),interactive:false,keyboard:false}).addTo(chLayer).getElement().firstChild.textContent=c.n}
+}
+map.on('zoomend moveend',chRefresh);
+function setCh(on){chOn=on;document.getElementById('chb').setAttribute('aria-pressed',on);try{LS.setItem('ui:chiban',on?'on':'off')}catch(e){}chRefresh()}
+document.getElementById('chb').onclick=()=>{setCh(!chOn);toast(chOn?(map.getZoom()<CH_Z?'さらに拡大すると地番の番号が出ます':'地番の番号を表示します'):'地番の番号を隠しました')};
+setCh(chOn);
 document.getElementById('lbl').onclick=()=>{setLbl(!lblOn);toast(lblOn?(map.getZoom()<LABEL_Z?'さらに拡大するとメモの文字が出ます':'メモの文字を表示します'):'メモの文字を隠しました（伐採届の赤い枠は残ります）')};
 setLbl(lblOn);
 let bt;
@@ -1253,7 +1285,7 @@ function loadDistrict(d){
   if(loading[d.file])return loading[d.file];
   toast(`${d.oaza} の地番を読み込んでいます…`);
   return loading[d.file]=fetch(dURL(d)).then(r=>{if(!r.ok)throw 0;return r.json()})
-    .then(gj=>{parcels.addData(tagM(gj,d));toast(`${d.oaza}：${d.count.toLocaleString()} 筆を表示`)})
+    .then(gj=>{parcels.addData(tagM(gj,d));chRefresh();toast(`${d.oaza}：${d.count.toLocaleString()} 筆を表示`)})
     .catch(()=>{delete loading[d.file];toast(`${d.oaza} の読み込みに失敗しました。通信状態を確認してください`)});
 }
 function bboxBounds(b){return L.latLngBounds([b[1],b[0]],[b[3],b[2]])}
