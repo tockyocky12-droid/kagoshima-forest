@@ -1,5 +1,5 @@
 // 森林ナビ（町ごとの版・かごしま森林ナビ 大隅で共通）：オフラインでも開けるようにするための仕組み
-const VER='v76';
+const VER='v77';
 // この仕組みが置かれたフォルダ（例：/my-first-repo/app/）。町ごとのフォルダで同じファイルを使う
 const BASE=new URL(self.registration.scope).pathname;
 const PFX=BASE.endsWith('/app/')?'forest':BASE.split('/').filter(Boolean).pop(); // 錦江町は今までどおり「forest」
@@ -69,7 +69,8 @@ self.addEventListener('fetch',e=>{
   if(u.origin===location.origin&&u.pathname===BASE+'kokuyu/index.json'){e.respondWith(networkFirst(req,DATA,true));return}
   if(u.origin===location.origin&&u.pathname.startsWith(BASE+'kokuyu/')){e.respondWith(dataCache(req));return}
   // 地図の画像は保存分を先に使う（画面から直接読むもの＝保存処理や標高の計算は、そのまま通す）
-  if(u.hostname==='cyberjapandata.gsi.go.jp'){if(req.destination==='image')e.respondWith(cacheFirst(req,TILES,TILE_MAX));return}
+  // 地図画像に加え、3D表示の標高と写真も一度読んだ分は覚えておく（同じ場所をもう一度3Dで見ても通信しない）
+  if(u.hostname==='cyberjapandata.gsi.go.jp'){if(req.destination==='image'||/^\/xyz\/(dem|seamlessphoto)/.test(u.pathname))e.respondWith(cacheFirst(req,TILES,TILE_MAX));return}
   if(u.origin===location.origin&&u.pathname.startsWith(BASE+'lib/')){e.respondWith(cacheFirst(req,STATIC));return} // 版番号つきのフォルダなので保存分を使う
   if(u.hostname==='cdnjs.cloudflare.com'||u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'){e.respondWith(cacheFirst(req,STATIC));return}
   // 設定ファイル（config.js）と目録類は、ブラウザの一時保存を使わず毎回最新を確認する（本体と設定の食い違いを防ぐ）
