@@ -399,7 +399,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17c</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17d</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1084,7 +1084,7 @@ function openSheet(layer){
   const prev=selected;selected=layer;if(prev)resetL(prev);layer.setStyle(styleOf(layer));layer.bringToFront();
   const p=layer.feature.properties;currentKey=keyOf(p);
   const kk=!!p.__kk;
-  document.getElementById('s-3d').hidden=!CFG.view3d||kk;
+  document.getElementById('s-3d').hidden=!CFG.view3d;
   document.getElementById('tab-forest').firstChild.textContent=kk?'国有林':'森林簿';
   document.getElementById('tab-bassai').hidden=kk;
   document.querySelector('#sheet .areas').hidden=kk;
@@ -1124,6 +1124,9 @@ function open3d(){const l=selected;if(!l||!CFG.view3d)return;
   const rings=g=>g.type==='Polygon'?g.coordinates:g.type==='MultiPolygon'?g.coordinates.flat():[];
   const items=[];for(const x of index){const p=x.feature&&x.feature.properties;if(!p||p.__kk)continue;try{if(!area.intersects(x.getBounds()))continue}catch(_){continue}
     items.push({r:rings(x.feature.geometry),n:String(chibanOf(p)||''),s:x===l})}
+  // 国有林の小班も重ねる（国有林を表示しているとき、または国有林の小班を選んだとき）
+  if(kkLayer&&(map.hasLayer(kkLayer)||isKK(l)))kkLayer.eachLayer(x=>{const p=x.feature&&x.feature.properties;if(!p)return;try{if(!area.intersects(x.getBounds()))return}catch(_){return}
+    const a=String(p.n||'').split('_');items.push({r:rings(x.feature.geometry),n:a.length===3?`${a[0]}${a[2]?'-'+a[2]:''}`:String(p.n||''),s:x===l,k:true})});
   v3dData={type:'v3d',center:[c.lat,c.lng],span:map.distance(b.getSouthWest(),b.getNorthEast()),items,
     title:[document.getElementById('s-chiban').textContent,document.getElementById('s-oaza').textContent].filter(Boolean).join('　')};
   document.getElementById('v3d').hidden=false;document.getElementById('v3d-f').src='./3d.html';
