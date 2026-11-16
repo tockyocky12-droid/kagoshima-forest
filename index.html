@@ -67,6 +67,9 @@ header h1{font-size:16px;margin:0;font-weight:700;flex:1;min-width:0;white-space
 #sheet .top{display:flex;align-items:flex-start;gap:10px}
 #sheet .oaza{font-size:13px;color:var(--muted);margin-top:2px}
 #sheet .close{border:0;background:transparent;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+#sheet .s3d{border:1.5px solid var(--accent,#2c8a50);background:transparent;color:var(--accent,#2c8a50);font:inherit;font-weight:700;font-size:13px;border-radius:999px;padding:3px 10px;cursor:pointer;margin-right:4px}
+#v3d{position:fixed;inset:0;z-index:3000;background:#cfe3ef}#v3d iframe{border:0;width:100%;height:100%;display:block}
+#v3d-x{position:absolute;right:calc(10px + env(safe-area-inset-right,0px));top:calc(8px + env(safe-area-inset-top,0px));width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#234;font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
 dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:12px 0;font-family:var(--f-data);font-size:14px}
 dt{color:var(--muted)} dd{margin:0;font-variant-numeric:tabular-nums}
 label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
@@ -390,7 +393,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-13a</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17a</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -483,12 +486,14 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
 </button>
 <div id="toast" hidden></div>
 <div id="empty" class="empty" hidden>地番データを読み込めませんでした。<br>通信状態を確認して、ページを開き直してください。</div>
+<div id="v3d" hidden><iframe id="v3d-f" title="3Dで見る"></iframe><button id="v3d-x" type="button" aria-label="3D表示を閉じる">×</button></div>
 <section id="sheet" hidden aria-live="polite">
   <div class="top">
     <button class="shead" id="s-head" type="button" aria-expanded="true" aria-controls="sbody">
       <span class="h2" id="s-chiban"></span>
       <span class="oaza" id="s-oaza"></span>
     </button>
+    <button class="s3d" id="s-3d" type="button" hidden aria-label="この地番を3Dで見る">3D</button>
     <button class="close" id="s-min" type="button" aria-label="小さくする">▾</button>
     <button class="close" id="s-close" type="button" aria-label="閉じる">×</button>
   </div>
@@ -1047,6 +1052,7 @@ function openSheet(layer){
   const prev=selected;selected=layer;if(prev)resetL(prev);layer.setStyle(styleOf(layer));layer.bringToFront();
   const p=layer.feature.properties;currentKey=keyOf(p);
   const kk=!!p.__kk;
+  document.getElementById('s-3d').hidden=!CFG.view3d||kk;
   document.getElementById('tab-forest').firstChild.textContent=kk?'国有林':'森林簿';
   document.getElementById('tab-bassai').hidden=kk;
   document.querySelector('#sheet .areas').hidden=kk;
@@ -1079,6 +1085,20 @@ function openSheet(layer){
   const sh=document.getElementById('sheet');sh.hidden=false;setMin(false);
   updateDots();setTab(kk&&curTab==='bassai'?'forest':curTab);fitMemo();
 }
+// 3Dで見る（試作。config.js で view3d:true にしたアプリだけ）：選んだ地番の周り約2km四方の地番の形を3D画面に渡す
+let v3dData=null;
+function open3d(){const l=selected;if(!l||!CFG.view3d)return;
+  const b=l.getBounds(),c=b.getCenter(),area=L.latLngBounds([c.lat-0.011,c.lng-0.013],[c.lat+0.011,c.lng+0.013]);
+  const rings=g=>g.type==='Polygon'?g.coordinates:g.type==='MultiPolygon'?g.coordinates.flat():[];
+  const items=[];for(const x of index){const p=x.feature&&x.feature.properties;if(!p||p.__kk)continue;try{if(!area.intersects(x.getBounds()))continue}catch(_){continue}
+    items.push({r:rings(x.feature.geometry),n:String(chibanOf(p)||''),s:x===l})}
+  v3dData={type:'v3d',center:[c.lat,c.lng],span:map.distance(b.getSouthWest(),b.getNorthEast()),items,
+    title:[document.getElementById('s-chiban').textContent,document.getElementById('s-oaza').textContent].filter(Boolean).join('　')};
+  document.getElementById('v3d').hidden=false;document.getElementById('v3d-f').src='./3d.html';
+}
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='v3d-ready'&&v3dData)e.source.postMessage(v3dData,location.origin)});
+document.getElementById('s-3d').onclick=open3d;
+document.getElementById('v3d-x').onclick=()=>{document.getElementById('v3d').hidden=true;document.getElementById('v3d-f').src='about:blank';v3dData=null};
 document.getElementById('s-close').onclick=()=>{document.getElementById('sheet').hidden=true;if(selected){const s=selected;selected=null;resetL(s)}};
 let ct;document.getElementById('chiseki').addEventListener('input',e=>{updateRatio();clearTimeout(ct);const k=currentKey,v=e.target.value.trim();
   ct=setTimeout(()=>{if(!store.set(k,v,'chiseki'))toast('地積を保存できませんでした（ブラウザの設定を確認してください）')},500)});
