@@ -401,7 +401,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17e</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17f</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1474,7 +1474,8 @@ function trkDraw(r,live){
   r.segs.forEach(sg=>{if(sg.length>1){const ll=sg.map(q=>[q[0],q[1]]); // 白いふちを付けて、地番の線や写真の上でも見やすく
     L.polyline(ll,{renderer:trkRenderer,color:'#fff',weight:8,opacity:.9,interactive:false,lineCap:'round',lineJoin:'round'}).addTo(g);
     L.polyline(ll,{renderer:trkRenderer,color:TRK_COLOR,weight:4.5,opacity:1,interactive:false,lineCap:'round',lineJoin:'round'}).addTo(g)}});
-  const p0=allPts(r)[0];if(p0)L.marker([p0[0],p0[1]],{icon:L.divIcon({className:'trkstart',iconSize:null}),interactive:false,keyboard:false}).addTo(g);
+  // 線が引けない（位置が1点だけの）ルートは、始点の印を出さない（写真だけ残したメモの印と重なって見にくいため）
+  const p0=allPts(r)[0];if(p0&&r.segs.some(sg=>sg.length>1))L.marker([p0[0],p0[1]],{icon:L.divIcon({className:'trkstart',iconSize:null}),interactive:false,keyboard:false}).addTo(g);
   r.marks.forEach(m=>{const mk=L.marker([m.lat,m.lng],{icon:L.divIcon({className:'mkpin'+(m.ph?' ph':''),iconSize:null}),title:m.text||'メモ'}).addTo(g);
     mk.bindPopup(()=>mk._pc||(mk._pc=mkPopup(r,m,live)),{maxWidth:260});mk.on('popupclose',()=>{mk._pc=null;const u=mk._phUrl;if(u){URL.revokeObjectURL(u);mk._phUrl=null}});mk.on('popupopen',()=>mkPhoto(mk,m))});
   return g;
