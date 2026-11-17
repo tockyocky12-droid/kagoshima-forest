@@ -133,6 +133,7 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .rp-step h3{font-size:15px;margin:0 0 4px}
 .rp-step p{font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.6}
 .rp-btns{display:flex;gap:8px;flex-wrap:wrap}
+.rp-ph{display:block;font-size:13px;margin:0 0 10px}.rp-ph select{font:inherit;font-size:13px;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg,#fff);color:inherit}
 .pbtn{display:inline-block;font:inherit;font-size:14px;padding:9px 14px;border-radius:8px;border:0;background:var(--accent);color:var(--accent-fg);cursor:pointer}
 #rec-save{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 .opt2{font-size:13px;margin:0 0 6px}.opt2 input{vertical-align:-2px;margin-right:4px}
@@ -374,7 +375,8 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <div class="rp-step">
       <h3>この端末の記録を送る</h3>
-      <p>メモ表示・メモ内部記録・地積・伐採届・施業履歴・踏査ルート（写真も含む）をファイルに書き出します。メールやLINEなどで、もう一方の端末に送ってください。</p>
+      <p>メモ表示・メモ内部記録・地積・伐採届・施業履歴・踏査ルート（写真も含む）をファイルに書き出します。メールやLINEなどで、もう一方の端末に送ってください。メールの添付は25MBまでなので、写真が多いときは「小さくして入れる」にします。</p>
+      <label class="rp-ph">踏査の写真：<select id="rec-ph"><option value="small">小さくして入れる（おすすめ）</option><option value="full">元の大きさで入れる</option><option value="none">入れない</option></select></label>
       <div class="rp-btns"><button id="rec-share" class="pbtn" type="button" hidden>共有して送る</button><button id="rec-save" class="pbtn" type="button">ファイルに保存</button></div>
     </div>
     <div class="rp-step">
@@ -399,7 +401,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17d</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17e</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -1912,10 +1914,20 @@ function collectRecords(){const items={};try{for(let i=0;i<LS.length;i++){const 
 // 踏査ルートも記録として数える（写真はファイルに書き出すときに付ける）
 const recItems=()=>{const it=collectRecords();routes.forEach(r=>it['route:'+r.id]=JSON.stringify(r));return it};
 function recSummary(items){const c={memo:0,mlabel:0,chiseki:0,bassai:0,rireki:0,route:0};Object.entries(items).forEach(([k,v])=>{const n=k.split(':')[0];if(n==='rireki'){try{c.rireki+=JSON.parse(v).length}catch(e){}}else if(n in c)c[n]++});return `メモ表示 ${c.mlabel}件・メモ内部記録 ${c.memo}件・地積 ${c.chiseki}件・伐採届 ${c.bassai}件・施業履歴 ${c.rireki}件・踏査ルート ${c.route}件`}
-async function recFile(){const items=recItems();const photos={};
-  for(const r of routes)for(const m of r.marks)if(m.ph){try{const b=await idb.get('trkph:'+m.ph);if(b)photos[m.ph]=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(b)})}catch(_){}}const d=new Date();const stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
+// 送るときの写真：small＝長い辺1024pxに縮める（1枚 約0.1〜0.2MB）／full＝そのまま／none＝入れない
+async function shrinkBlob(b,MAX,q){const bmp=await createImageBitmap(b);const k=Math.min(1,MAX/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  const o=await new Promise(ok=>c.toBlob(ok,'image/jpeg',q));return o&&o.size<b.size?o:b}
+async function recFile(){const items=recItems();const photos={};const mode=(document.getElementById('rec-ph')||{}).value||'small';let nph=0;
+  if(mode!=='none')for(const r of routes)for(const m of r.marks)if(m.ph){try{let b=await idb.get('trkph:'+m.ph);if(!b)continue;if(mode==='small'){try{b=await shrinkBlob(b,1024,0.7)}catch(_){}}
+    photos[m.ph]=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(b)});nph++}catch(_){}}const d=new Date();const stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
   const body=JSON.stringify({app:CFG.recApp,kind:'records',version:1,exportedAt:d.toISOString(),items,photos},null,1);
-  return {file:new File([body],`${CFG.filePrefix}-${stamp}.json`,{type:'application/json'}),txt:new File([body],`${CFG.filePrefix}-${stamp}.txt`,{type:'text/plain'}),count:Object.keys(items).length,items}}
+  const file=new File([body],`${CFG.filePrefix}-${stamp}.json`,{type:'application/json'});
+  return {file,txt:new File([body],`${CFG.filePrefix}-${stamp}.txt`,{type:'text/plain'}),count:Object.keys(items).length,items,nph,mode,
+    size:`約${file.size<1048576?(file.size/1048576).toFixed(2):(file.size/1048576).toFixed(1)}MB${nph?`・写真${nph}枚`:''}`,big:file.size>20*1048576}}
+try{const v=localStorage.getItem('ui:recph');if(v)document.getElementById('rec-ph').value=v}catch(_){}
+document.getElementById('rec-ph').addEventListener('change',e=>{try{localStorage.setItem('ui:recph',e.target.value)}catch(_){}recBigOK=false});
+let recBigOK=false; // 大きいファイルの注意を見たあと、もう一度押したら送る
 function rpMsg(t){const m=document.getElementById('rp-msg');m.textContent=t;m.hidden=!t}
 // ---- 地図を端末に保存（国土地理院の地図画像を、Wi-Fiのときに先に読んでおく） ----
 const SAVED_CACHE='gsi-saved-v1',SV_MAX=3000;
@@ -2014,19 +2026,22 @@ document.getElementById('recp').addEventListener('click',e=>{if(e.target.id==='r
 if(MULTI&&CFG.importFrom)document.getElementById('rec-file').closest('.rp-step').querySelector('p').append(`町ごとの版（${Object.values(CFG.importFrom).map(c=>(MUNI[c]||{}).name).filter(Boolean).join('・')}）の記録ファイルも、そのまま取り込めます。`);
 const canShareFiles=(()=>{try{return !!(navigator.share&&navigator.canShare&&navigator.canShare({files:[new File(['x'],'t.txt',{type:'text/plain'})]}))}catch(e){return false}})();
 document.getElementById('rec-share').hidden=!canShareFiles;
-document.getElementById('rec-share').onclick=async()=>{const r=await recFile();if(!r.count){rpMsg('送る記録がまだありません');return}
+document.getElementById('rec-share').onclick=async()=>{rpMsg('ファイルを作っています…');const r=await recFile();if(!r.count){rpMsg('送る記録がまだありません');return}
+  // Gmailなどは添付が25MBまで。大きすぎるときは先に知らせる（もう一度押せば、そのまま送る）
+  if(r.big&&!recBigOK){recBigOK=true;rpMsg(`ファイルが大きすぎます（${r.size}）。Gmailなどのメールでは25MBまでしか送れません。「踏査の写真」を「小さくして入れる」か「入れない」にしてから送ってください。このまま送るときは、もう一度「共有して送る」を押してください。`);return}
+  recBigOK=false;
   // スマホの共有で送れるよう、中身はそのままテキストファイル（.txt）として渡す
-  const f=r.txt;rpMsg('共有の画面を開いています…');
+  const f=r.txt;rpMsg(`共有の画面を開いています…（${r.size}）`);
   try{
     if(navigator.canShare&&!navigator.canShare({files:[f]}))throw Object.assign(new Error('x'),{name:'NotSupported'});
-    await navigator.share({files:[f],title:'森林ナビの記録'});rpMsg(`${r.count}件の記録を共有しました`)
+    await navigator.share({files:[f],title:'森林ナビの記録'});rpMsg(`${r.count}件の記録（${r.size}）を送り先のアプリに渡しました。届かないときは、送り先のアプリの画面（送信済み・下書きなど）も確認してください`)
   }catch(e){
     if(e&&e.name==='AbortError'){rpMsg('共有を取りやめました');return}
     saveRec(r);rpMsg(`共有できなかったので、ダウンロードフォルダに「${r.file.name}」を保存しました。そのファイルをLINEやメールで送ってください。（理由：${e&&e.name||'不明'}）`);
   }};
 function saveRec(r){const a=document.createElement('a');a.href=URL.createObjectURL(r.file);a.download=r.file.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
 document.getElementById('rec-save').onclick=async()=>{const r=await recFile();if(!r.count){rpMsg('保存する記録がまだありません');return}
-  saveRec(r);rpMsg(`ダウンロードフォルダに「${r.file.name}」を保存しました`)};
+  saveRec(r);rpMsg(`ダウンロードフォルダに「${r.file.name}」（${r.size}）を保存しました${r.big?'。25MBを超えているので、メールでは送れません':''}`)};
 document.getElementById('rec-file').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
   try{const o=JSON.parse(await f.text());
