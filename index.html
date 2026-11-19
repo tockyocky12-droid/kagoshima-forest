@@ -401,7 +401,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-17f</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-19a</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -930,7 +930,11 @@ function rawTint(f){
 // まとめた版：選んでいない市町村の地番・国有林は、灰色の細い線だけで薄く出す（押すとその市町村に切り替わる）
 function otherMuni(p){if(!MULTI)return false;const v=document.getElementById('muni').value;if(!v)return false;
   return p.__kk?(p.mn&&p.mn!==(MUNI[v]||{}).name):(p.__m&&p.__m!==v)}
-const DIM=()=>({color:isPhoto()?'#e5e7eb':'#9ca3af',weight:.7,opacity:.8,dashArray:null,fillOpacity:0});
+// 縮小して地番の線が混み合うときは、線を細く・薄くして写真が見えるようにする（拡大率14以下・15・16・17以上の4段階）
+const lzOf=z=>z<=14?0:z===15?1:z===16?2:3;
+const LW=[.5,.7,.9,1.1],LO_P=[.4,.55,.75,.95],LO_M=[.5,.65,.85,1];
+const lz=()=>lzOf(map.getZoom());
+const DIM=()=>({color:isPhoto()?'#e5e7eb':'#9ca3af',weight:lz()<2?.5:.7,opacity:isPhoto()?LO_P[lz()]*.8:.8,dashArray:null,fillOpacity:0});
 function styleFor(f){
   const sel=selected&&selected.feature===f;
   if(!sel&&otherMuni(f.properties))return DIM();
@@ -940,8 +944,9 @@ function styleFor(f){
   {const b=bassaiOf(f.properties),ml=mlabelOf(f.properties);
     if(b&&isDone(b))return {color:isPhoto()?'#e7e5e4':'#78716c',weight:1.6,dashArray:'4 4',fillOpacity:tc?.6:.08,fillColor:tc||'#78716c'};
     if(b||ml)return {color:'#dc2626',weight:2.5,dashArray:'6 4',fillOpacity:tc?.6:.22,fillColor:tc||'#dc2626'}}
-  if(tc)return {color:isPhoto()?'#fde68a':'#3d2b1f',weight:.6,fillOpacity:.6,fillColor:tc};
-  return {color:isPhoto()?'#fde68a':'#c2410c',weight:1,fillOpacity:.04,fillColor:'#c2410c'};
+  const k=lz(),op=(isPhoto()?LO_P:LO_M)[k];
+  if(tc)return {color:isPhoto()?'#fde68a':'#3d2b1f',weight:.6,opacity:op,fillOpacity:.6,fillColor:tc};
+  return {color:isPhoto()?'#fde68a':'#c2410c',weight:LW[k],opacity:op,fillOpacity:.04,fillColor:'#c2410c'};
 }
 function setTint(t){
   tint=t;['none','species','age','rireki','own'].forEach(k=>document.getElementById('t-'+k).setAttribute('aria-pressed',k===t));
@@ -1280,6 +1285,7 @@ function kkApply(){
 document.getElementById('kk').onclick=()=>{kkOn=!kkOn;zoomHint();if(tint!=='none')drawLegend();try{LS.setItem('ui:kokuyu2',kkOn?'on':'off')}catch(e){}kkApply();
   toast(kkOn?(map.getZoom()<MINZ?'地図を拡大すると国有林が表示されます':'国有林を表示しました（水色の点線、茶色の線は林道）'):'国有林を隠しました')};
 map.on('zoomend',kkApply);
+{let lzLast=null;map.on('zoomend',()=>{const k=lz();if(k===lzLast)return;lzLast=k;if(parcels)parcels.setStyle(styleFor)})} // 線の太さ・濃さの段階が変わったときだけ描き直す
 function zoomHint(){const z=document.getElementById('zhint');z.hidden=map.getZoom()>=MINZ;z.textContent=kkOn?'地図を拡大すると、民有林（地番）と国有林の境界が表示されます':'地図を拡大すると、地番の境界が表示されます'}
 map.on('zoomend',zoomHint);
 kkApply();
