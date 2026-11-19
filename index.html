@@ -43,6 +43,7 @@ header h1{font-size:16px;margin:0;font-weight:700;flex:1;min-width:0;white-space
 #zhint,.zhint{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:950;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:12.5px;box-shadow:0 2px 8px rgba(0,0,0,.18);pointer-events:none;max-width:calc(100% - 120px);text-align:center;line-height:1.4}
 #maparea{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
 #map{flex:1;min-height:0}
+#map.kpmode{background:#fff} /* 計画図だけを出すときは白い紙の上に */
 #cands{position:absolute;top:0;left:0;right:0;z-index:1050;max-height:70%;overflow:auto;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 6px 16px rgba(0,0,0,.2);
   padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));padding-block:0 8px}
 .chead{position:sticky;top:0;background:var(--panel);display:flex;align-items:center;justify-content:space-between;padding:10px 4px 6px;font-weight:700;font-size:14px}
@@ -401,7 +402,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </div>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-19c</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-19d</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -641,7 +642,9 @@ const FallbackTileLayer=L.TileLayer.extend({
 const std=new FallbackTileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{maxZoom:18,attribution:gsiAttr,updateWhenZooming:false,keepBuffer:1});
 const photo=new FallbackTileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',{maxZoom:18,attribution:gsiAttr,updateWhenZooming:false,keepBuffer:1});
 std.addTo(map);
+let basePhoto=false; // いま選んでいる背景（計画図の表示中は背景を外すので、地図の状態とは別に覚える）
 function setBase(p){
+  basePhoto=!!p;if(kpOn&&kpSheets.length){kpSet(false);toast('森林計画図を外しました')} // 地図・写真を押したら計画図から戻す
   (p?std:photo).remove();(p?photo:std).addTo(map);
   document.getElementById('bm-std').setAttribute('aria-pressed',!p);
   document.getElementById('bm-photo').setAttribute('aria-pressed',p);
@@ -789,7 +792,8 @@ function areaM2(layer){ // 球面上の多角形面積（概算）
 }
 
 let parcels=null,selected=null,currentKey=null;
-const isPhoto=()=>map.hasLayer(photo);
+let kpMode=false; // 計画図だけを出している間は、線や文字を地図用の色にする
+const isPhoto=()=>basePhoto&&!kpMode;
 
 // ---- 森林簿（鹿児島県 森林簿オープンデータ） ----
 let forest={}; // forest[大字][地番] = [小班...]（端末に読み込んだ森林簿CSVから作る）
@@ -1881,11 +1885,21 @@ function kpApply(){
   if(kpOn&&kpSheets.length){if(!kpLayer)kpLayer=new KPLayer({pane:'kp',minZoom:14,maxZoom:18,opacity:.9,updateWhenZooming:false,keepBuffer:1});
     if(!map.hasLayer(kpLayer)){kpLayer.addTo(map);map.attributionControl.addAttribution(KP_ATTR)}}
   else if(kpLayer&&map.hasLayer(kpLayer)){kpLayer.remove();map.attributionControl.removeAttribution(KP_ATTR)}
+  kpBase();
 }
 function kpSet(on){kpOn=on;try{LS.setItem('ui:kp',on?'on':'off')}catch(e){}kpApply()}
+// 計画図を表示している間（拡大率14以上）は、地図・写真を外して白い紙の上に計画図だけを出す（見やすく、地図画像の通信もしない）
+function kpBase(){
+  const on=!!(kpOn&&kpSheets.length&&map.getZoom()>=14),b=basePhoto?photo:std;
+  map.getContainer().classList.toggle('kpmode',on);map.getContainer().classList.toggle('ph',basePhoto&&!on);
+  if(on!==kpMode){kpMode=on;if(parcels)parcels.setStyle(styleFor);if(kkLayer)kkLayer.setStyle(kkStyle)}
+  if(on){if(map.hasLayer(std))std.remove();if(map.hasLayer(photo))photo.remove();if(kpLayer)kpLayer.setOpacity(1)}
+  else{if(!map.hasLayer(b))b.addTo(map);if(kpLayer)kpLayer.setOpacity(.9)}
+}
+map.on('zoomend',kpBase);
 document.getElementById('kp').onclick=()=>{
   if(!kpSheets.length){kpOpen();return}
-  kpSet(!kpOn);toast(kpOn?(map.getZoom()<14?'地図を拡大すると森林計画図が重なります':'森林計画図を重ねました（白い所は透けます）'):'森林計画図を外しました')};
+  kpSet(!kpOn);toast(kpOn?(map.getZoom()<14?'地図を拡大すると森林計画図に切り替わります':'森林計画図に切り替えました（「地図」「写真」で戻ります）'):'森林計画図を外しました')};
 function kpList(){
   const box=document.getElementById('kp-list');box.replaceChildren();
   document.getElementById('kp-sum').textContent=kpSheets.length?`この端末に ${kpSheets.length}枚（約${Math.round(kpSheets.reduce((a,s)=>a+s.pieces.reduce((b,p)=>b+(p.kb||0),0),0)/1024)}MB）`:'まだ読み込んでいません';
