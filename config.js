@@ -18,6 +18,8 @@ window.CFG={
   csvHint:'使う市町村の森林簿CSV（いくつでも足せます）',
   csvUrl:'https://www.pref.kagoshima.jp/ad12/shinrin-open.html', // 県の森林資源情報オープンデータのページ（初回に案内する）
   kkOffice:'森林管理署',
+  planFile:'data/plan46490.json', // 伐採届の審査の目安（錦江町森林整備計画 別表２。錦江町の地番だけ）
+  planMuni:'46490',
   view3d:true,                 // 地番カードに「3D」ボタンを出す（2026-11-17〜）
   // 町ごとの版の記録ファイルを取り込むとき、どの市町村の記録かを決める
   importFrom:{'kinko-forest':'46490','minamiosumi-forest':'46491','kimotsuki-forest':'46492'},
