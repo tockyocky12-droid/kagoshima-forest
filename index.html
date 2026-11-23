@@ -126,7 +126,7 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 #tint .fwrap{margin-left:0}
 .fwrap[hidden],[hidden]{display:none!important}
 .hbtn{border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit;font-size:16px;border-radius:8px;width:36px;height:32px;cursor:pointer;flex:none}
-#recp,#trkp,#mkp,#csvg,#kpp{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;
+#recp,#trkp,#mkp,#csvg,#kpp,#ntcp{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;
   padding:calc(env(safe-area-inset-top,0px) + 56px) max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));overflow:auto}
 .rp-card{background:var(--panel);color:var(--fg);border-radius:14px;padding:16px;max-width:460px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 .rp-top{display:flex;align-items:center;justify-content:space-between}
@@ -211,6 +211,10 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .brow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .brow>div{min-width:0}
 .bnote{font-size:11px;color:var(--muted)}
+.bntc{margin-top:4px}
+#ntc-t{width:100%;box-sizing:border-box;min-height:52vh;font:14px/1.75 "BIZ UDMincho","Hiragino Mincho ProN","Yu Mincho",serif;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);resize:vertical}
+.ntc-j{font-size:13.5px;font-weight:700;margin:0 0 8px;padding:6px 10px;border-radius:8px}.ntc-j.ok{background:#dcfce7;color:#14532d}.ntc-j.ng{background:#fee2e2;color:#7f1d1d}.ntc-j.un{background:#fef3c7;color:#78350f}
+.ntc-n{font-size:11.5px;color:var(--muted);margin:6px 0 10px}
 .bper{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}.bper span{color:var(--muted)}
 .bmore{border-top:1px solid var(--line);padding-top:6px}.bmore>summary,.bhist>summary{cursor:pointer;font-size:13px;color:var(--muted);padding:4px 0}.bmore[open]>summary{margin-bottom:4px}
 .bhist{border-top:1px solid var(--line);padding-top:6px;font-size:12.5px;line-height:1.45}.bh-t{font-weight:700;margin-bottom:4px}.bh-i{padding:5px 0;border-bottom:1px dashed var(--line)}.bh-i b{font-family:var(--f-data)}
@@ -371,6 +375,15 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
   </div>
   <button id="rec-open" class="hbtn" type="button" aria-label="データと記録（森林簿・計画図の追加、記録の受け渡し、地図の保存）">⇅</button>
 </header>
+<div id="ntcp" hidden>
+  <div class="rp-card" role="dialog" aria-labelledby="ntc-ttl">
+    <div class="rp-top"><h2 id="ntc-ttl">通知書の下書き</h2><button id="ntc-close" class="close" type="button" aria-label="閉じる">×</button></div>
+    <p class="ntc-j" id="ntc-j"></p>
+    <textarea id="ntc-t" spellcheck="false" aria-label="通知書の下書き（書き換えられます）"></textarea>
+    <p class="ntc-n">下書きです。文面は書き換えられます。町の様式・決裁に合わせて確認してから使ってください。届出者名などはこの端末の中だけで作っています。</p>
+    <div class="rp-btns"><button id="ntc-copy" class="pbtn" type="button">文面をコピー</button><button id="ntc-print" class="pbtn ghost2" type="button">印刷・PDF</button></div>
+  </div>
+</div>
 <div id="recp" hidden>
   <div class="rp-card" role="dialog" aria-labelledby="rp-ttl">
     <div class="rp-top"><h2 id="rp-ttl">データと記録</h2><button id="rec-close" class="close" type="button" aria-label="閉じる">×</button></div>
@@ -415,7 +428,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <details class="rp-step dnotes" id="ddates"><summary>データの時点と出典</summary><div id="ddates-body"></div></details>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-21a</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-23a</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -567,6 +580,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     </details>
     <details id="b-hist" class="bhist" hidden></details>
     <div class="bnote">地図の枠：赤い点線＝期間中・これから、灰色の点線＝期間終了</div>
+    <div class="bntc" id="b-ntc-row" hidden><button id="b-ntc" class="pbtn" type="button">通知書の下書きを作る</button></div>
     <div class="bdel" id="b-delrow"><button type="button" id="b-del" class="bdelbtn">この伐採届を削除</button></div>
   </div>
   </div>
@@ -1126,6 +1140,61 @@ function planBox(p,r){
   d.append(l2);
   const sm=document.createElement('small');sm.textContent='目安です。林齢は森林簿の作成時点。保安林・砂防指定地などの制限、伐採率（択伐30%・間伐35%以下）、更新の計画は別に確認してください。';d.append(sm);
   return d}
+// ---- 通知書の下書き（きんこう版だけ：CFG.noticeDraft）。伐採届の入力・森林簿・森林整備計画から文案を作る ----
+const wareki=d=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d||'');if(!m)return '令和　年　月　日';const y=+m[1];
+  return `${y>=2019?'令和'+(y===2019?'元':y-2018):'平成'+(y-1988)}年${+m[2]}月${+m[3]}日`};
+const todayISO=()=>{const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`};
+function planJudge(p,r,method){ // 1小班の判定：ok / ng / un（判断できない）と理由
+  const sp=(r.sp||[])[0],spn=sp&&(SP_PLAN[sp[1]]||(/広/.test(sp[1]||'')?'その他広':null)),age=sp&&sp[2];
+  const zs=planR?planZones(p,r):null;
+  if(!planR||!zs||!spn||!planR.std[spn])return {j:'un',why:`林小班${r.k}：樹種・区分が分からないため、手作業で確認してください。`};
+  const std=planR.std[spn],lim={'1':std+10,'2':std*2-10,'3':std*2},Z={'1':'伐期の延長を推進すべき森林（※1）','2':'水源の涵養の機能の維持増進を図る長伐期施業を推進すべき森林（※2）','3':'長伐期施業を推進すべき森林（※3）'};
+  const min=Math.max(std,...zs.map(z=>lim[z])),zt=zs.length?zs.map(z=>Z[z]).join('及び'):'別表２の指定のない森林';
+  const base=`林小班${r.k}（${spn}${age!=null?`・${age}年生`:''}）は、錦江町森林整備計画において${zt}であり、${spn}の主伐の林齢の下限は${min}年です。`;
+  if(method==='間伐')return {j:'ok',why:base+'間伐のため、林齢の下限はかかりません。',zs,min,age,spn};
+  if(age==null)return {j:'un',why:base+'森林簿に林齢が無いため、手作業で確認してください。'};
+  if(age>=min)return {j:'ok',why:base+`現在${age}年生で、下限を満たしています。`,zs,min,age,spn};
+  return {j:'ng',why:base+`現在${age}年生で、下限に${min-age}年足りません（主伐＝皆伐・択伐はできません。間伐は可能です）。`,zs,min,age,spn}}
+function noticeDraft(layer){
+  const p=layer.feature.properties,b={};BF.forEach(k=>{b[k]=document.getElementById('b-'+k).value.trim()});
+  const recs=forestOf(p)||[],method=b.method||'';
+  const js=recs.map(r=>planJudge(p,r,method));
+  const J=!recs.length||!method?'un':js.some(x=>x.j==='ng')?'ng':js.some(x=>x.j==='un')?'un':'ok';
+  const place=`錦江町 ${oazaOf(p)} ${chibanOf(p)}番`,ks=recs.map(r=>r.k).join('、')||'（森林簿に該当なし）';
+  const per=b.from||b.to?`${wareki(b.from)}から${wareki(b.to)}まで`:'　　年　月　日から　　年　月　日まで';
+  const ho=recs.filter(r=>r.ho).map(r=>`${r.k}：${r.ho}保安林`);
+  const notes=[];
+  if(method==='皆伐')notes.push('伐採後は、伐採が終了した日を含む年度の翌年度の初日から起算して2年以内に、植栽により更新してください。');
+  if(method==='択伐')notes.push('択伐は材積伐採率30%以下（植栽によらなければ更新が困難な森林は40%以下）で行い、伐採が終了した日を含む年度の翌年度の初日から起算して5年以内に更新してください。');
+  if(method==='間伐')notes.push('間伐は材積伐採率35%以下とし、おおむね5年後に樹冠疎密度が0.8以上に回復するよう行ってください。');
+  if(ho.length)notes.push(`保安林（${ho.join('、')}）を含みます。保安林内の伐採は森林法第34条による県の許可等が必要です（町への届出の対象かどうかを確認してください）。`);
+  const head=['錦　第　　　号',wareki(todayISO()),'',`${b.app||'（届出者）'}　様`,'','錦江町長　　　　　　　　　　　㊞',''];
+  const body=J==='ng'?[
+    '伐採及び伐採後の造林の計画について（通知）','',
+    `${wareki(b.date)}付けで提出のあった伐採及び伐採後の造林の届出書に記載された伐採及び伐採後の造林の計画は、下記の理由により、錦江町森林整備計画に適合していないことを通知します。`,
+    '計画を変更のうえ、改めて届け出てください。','','記','']
+   :[
+    '伐採及び伐採後の造林の計画の適合通知書','',
+    `${wareki(b.date)}付けで提出のあった伐採及び伐採後の造林の届出書に記載された伐採及び伐採後の造林の計画は、錦江町森林整備計画に適合していることを通知します。`,'','記',''];
+  const items=[`１　森林の所在場所　${place}`,`２　林小班　　　　${ks}`,`３　伐採の方法　　${method||'（　　）'}`,`４　伐採面積　　　${b.area?b.area+' ha':'　　 ha'}`,`５　伐採の期間　　${per}`];
+  if(b.no)items.push(`６　届出番号　　　${b.no}`);
+  const zen=n=>String(n).replace(/\d/g,c=>String.fromCharCode(c.charCodeAt(0)+0xFEE0));
+  const reason=J==='ng'?['',`${zen(items.length+1)}　適合しない理由`,...js.filter(x=>x.j==='ng').map(x=>'　'+x.why)]:[];
+  const bik=notes.length?['',`${zen(items.length+1+(reason.length?1:0))}　留意事項`,...notes.map(n=>'　・'+n)]:[];
+  const text=[...head,...body,...items,...reason,...bik].join('\n');
+  const jl={ok:method==='間伐'?'錦江町森林整備計画に適合（間伐のため林齢の下限なし）':'錦江町森林整備計画に適合（主伐の林齢の下限を満たす）',ng:'不適合の可能性（主伐の林齢の下限に足りない）',un:'自動では判断できません（森林簿・伐採方法・樹種を確認してください）'}[J];
+  return {text,J,jl,why:js.map(x=>x.why)}}
+document.getElementById('b-ntc').onclick=()=>{if(!selected)return;const d=noticeDraft(selected);
+  const j=document.getElementById('ntc-j');j.className='ntc-j '+d.J;j.textContent=d.jl;j.title=d.why.join('\n');
+  document.getElementById('ntc-t').value=d.text;document.getElementById('ntcp').hidden=false};
+document.getElementById('ntc-close').onclick=()=>document.getElementById('ntcp').hidden=true;
+document.getElementById('ntcp').addEventListener('click',e=>{if(e.target.id==='ntcp')e.target.hidden=true});
+document.getElementById('ntc-copy').onclick=async()=>{const t=document.getElementById('ntc-t');
+  try{await navigator.clipboard.writeText(t.value);toast('文面をコピーしました。Wordなどに貼り付けてください')}catch(_){t.select();document.execCommand('copy');toast('文面をコピーしました')}};
+document.getElementById('ntc-print').onclick=()=>{const w=window.open('','_blank');if(!w){toast('印刷の画面を開けませんでした（ポップアップを許可してください）');return}
+  const esc=x=>x.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>通知書</title><style>@page{size:A4;margin:25mm 22mm}body{font:11pt/1.9 "BIZ UDMincho","Yu Mincho","Hiragino Mincho ProN",serif;white-space:pre-wrap;margin:0}</style><body>${esc(document.getElementById('ntc-t').value)}</body>`);
+  w.document.close();w.focus();setTimeout(()=>w.print(),300)};
 // 県の森林簿ダウンロードのページへのリンク（いつでも開けるように）
 function dlLink(){const a=document.createElement('a');a.href=CFG.csvUrl||'https://www.pref.kagoshima.jp/ad12/shinrin-open.html';a.target='_blank';a.rel='noopener';a.textContent='県のダウンロードページ';return a}
 // 市町村が変わったら、地図の色と凡例をその市町村に合わせる
@@ -1161,6 +1230,7 @@ function openSheet(layer){
   renderForest(p);
   const b=bassaiRaw(p)||{};
   BF.forEach(k=>document.getElementById('b-'+k).value=b[k]||'');document.getElementById('b-more').open=false;bMoreSum();bHist(b);bDelRow();
+  document.getElementById('b-ntc-row').hidden=!CFG.noticeDraft;
   }
   rkClose();renderRireki();
   document.getElementById('memo').value=store.get(currentKey);
