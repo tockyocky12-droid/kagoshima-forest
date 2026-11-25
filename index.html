@@ -249,6 +249,7 @@ textarea{width:100%;min-height:72px;max-height:28vh;font:inherit;padding:8px;bor
 .ftab{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;font-family:var(--f-data)}
 .ftab th{font-weight:400;color:var(--muted);font-size:11.5px;line-height:1.3;text-align:right;padding:2px 4px;border-bottom:1px solid var(--line)}
 .ftab th:first-child,.ftab td:first-child{text-align:left}
+.ftab-n{font-size:11.5px;color:var(--muted);margin:4px 0 0;line-height:1.5}
 .ftab td{text-align:right;padding:3px 4px;border-bottom:1px solid var(--line)}.ftab td.w{color:#b45309;font-weight:700}
 .dd-row{font-size:12.5px;line-height:1.6;margin:8px 0 0}.dd-row b{display:block;font-size:13px}.dd-row span{color:var(--muted)}
 .dl-row a{font-size:13px;color:var(--accent)}
@@ -395,6 +396,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
       <div class="dl-row"><span class="fwrap pwrap"><span class="pbtn">森林簿CSVを追加</span><input id="dl-csv" class="fover" type="file" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain" multiple aria-label="森林簿CSVを選ぶ"></span>
         <a id="dl-link" href="https://www.pref.kagoshima.jp/ad12/shinrin-open.html" target="_blank" rel="noopener">県のダウンロードページ</a><span class="dl-st" id="dl-csv-st"></span></div>
       <div id="dl-ftab" hidden><table class="ftab"><thead><tr><th>市町</th><th>小班</th><th>空欄で<br>飛ばした行</th><th>地番に<br>結び付かない</th></tr></thead><tbody></tbody></table>
+        <p class="ftab-n">空欄で飛ばした行＝森林簿のうち、大字や地番が空欄・読み替えできずに取り込めなかった行。「—」はこの数え方を入れる前（2026年11月21日より前）に読み込んだ分で、読み込み直すと数えます。</p>
         <div class="dl-row"><button id="dl-match" class="pbtn ghost2" type="button">地番との結び付きを調べる</button><span class="dl-st" id="dl-match-st"></span></div></div>
       <div class="dl-row"><span class="dl-st" id="dl-store"></span></div>
       <div class="dl-row" id="dl-kp"><button id="kp-manage" class="pbtn" type="button">森林計画図（zip・PDF）を追加・管理</button><span class="dl-st" id="dl-kp-st"></span></div>
@@ -428,7 +430,7 @@ body.trk-on .leaflet-top.leaflet-left{top:98px}
     <details class="rp-step dnotes" id="ddates"><summary>データの時点と出典</summary><div id="ddates-body"></div></details>
     <details class="rp-step dnotes" id="dnotes" hidden><summary>地番データについてのお知らせ</summary><div id="dnotes-body"></div></details>
     <p class="rp-note disc" hidden></p>
-    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-23a</span></p>
+    <p class="rp-note">森林簿のCSVはここには含まれません。各端末で読み込んでください。<span class="rp-ver">版 2026-11-26a</span></p>
   </div>
 </div>
 <form id="search" autocomplete="off">
@@ -2178,9 +2180,9 @@ function drawFtab(){
   const tb=box.querySelector('tbody');tb.replaceChildren();const blank=forestMeta.blank||{};
   const gs=forestGroups(),shownBlank=new Set();
   gs.forEach(x=>{const tr=document.createElement('tr');
-    const bk=MULTI?x.mc:'_',b=shownBlank.has(bk)?null:(blank[bk]||0);shownBlank.add(bk);
+    const bk=MULTI?x.mc:'_',b=shownBlank.has(bk)?null:(bk in blank?blank[bk]:'—');shownBlank.add(bk);
     const um=fmMatch[x.name];
-    [x.name,x.recs.size.toLocaleString(),b==null?'':b.toLocaleString(),um==null?'—':`${um.toLocaleString()}（${Math.round(um/x.recs.size*100)}%）`].forEach((v,i)=>{
+    [x.name,x.recs.size.toLocaleString(),b==null?'':typeof b==='number'?b.toLocaleString():b,um==null?'—':`${um.toLocaleString()}（${Math.round(um/x.recs.size*100)}%）`].forEach((v,i)=>{
       const td=document.createElement('td');td.textContent=v;if((i===2&&b>0)||(i===3&&um>0))td.className='w';tr.append(td)});tb.append(tr)})}
 document.getElementById('dl-match').onclick=async()=>{
   const st=document.getElementById('dl-match-st'),btn=document.getElementById('dl-match');btn.disabled=true;
